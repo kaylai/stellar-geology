@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stellar_geology"
+version = "0.0.1"
+description = "A python library for calculating planet geochemistry from stellar compositions."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    { name = "Kayla Iacovino", email = "kaylaiacovino@gmail.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/kaylai/stellar-geology"
+Repository = "https://github.com/kaylai/stellar-geology"
