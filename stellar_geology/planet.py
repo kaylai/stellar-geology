@@ -1,6 +1,8 @@
 from . import star
 from . import conversions as conv
 from . import constants as const
+import warnings as w
+
 
 class Planet(object):
     def __init__(self, bulk_planet=None, bulk_silicate_planet=None,
@@ -64,9 +66,13 @@ class Planet(object):
         self._mass = mass
         
         if bulk_planet is not None:
+            unrecognized_keys = []
             for k in bulk_planet.keys():
-                if k not in list(const.oxides_to_elements.keys()):
-                    raise ValueError("bulk_planet must be passed as oxides (e.g., 'SiO2 not 'Si').")
+                if k not in const.elements_to_oxides.keys() and k not in const.oxides_to_elements.keys():
+                    unrecognized_keys.append(k)
+            if len(unrecognized_keys) > 0:
+                w.warn(f"{unrecognized_keys} were not recognized as compositional parameters and "
+                       "will be ignored in calculations.", category=UserWarning)
         
         if bulk_planet is not None and stellar_dex is not None:
             raise ValueError("Can not pass both bulk_planet and stellar_dex.")
@@ -192,7 +198,14 @@ class Planet(object):
         Calculates the bulk silicate composition given known bulk composition and
         the alphas ratio for partitioning bulk Fe between the core and mantle, as
         defined in Putirka and Rarick (2019).
-        
+
+        The algorithm follows the Putirka & Rarick (2019) supplementary
+        spreadsheet.  Only Fe and Ni alphas are used to set their BSP
+        concentrations directly.  All other elements (including Si, even if
+        an alpha is supplied) are proportionally rescaled to fill the
+        remaining mass (100 − Fe_BSP − Ni_BSP).  The result is converted
+        from element wt% to oxide wt% and normalized to 100.
+
         Parameters
         ----------
         bulk_planet:    dict
@@ -202,8 +215,8 @@ class Planet(object):
                 in Putirka and Rarick (2019): e.g., alphas = FeBSP/FeBP. Will always
                 be a positive fraction <1. Used for defining which elements partition
                 into a metallic core. Commonly, Fe, Si, and Ni. Fe is required when
-                passing this argument: {'Fe': 0.49}. 
-        
+                passing this argument: {'Fe': 0.49}.
+
         Returns
         -------
         dict
@@ -212,16 +225,53 @@ class Planet(object):
         # TODO consider failure cases for other lack of keys (Ni?), units, etc...
         if "FeO" not in list(bulk_planet.keys()):
             raise ValueError("Bulk planet composition must have FeO concentration.")
-        
-        # must translate bulk_planet to be on wt% cation basis
+
+        if self._bulk_silicate_planet is not None:
+            w.warn("Warning: this Planet's bulk_silicate_planet composition "
+                   "will be overwritten.", category=UserWarning)
+
+        # Translate bulk_planet to wt% element basis
+        bulk_wtpt_elements = self.get_composition(
+            which="bulk_planet", units="wtpt_elements"
+        )
+
+        # Validate alpha values
         for k, v in alphas.items():
             if v <= 0 or v >= 1:
-                raise ValueError(f"{k} alpha value must be a float where 0 < alpha < 1")
-        
-        partitioned_silicate_concentrations = {k:v*bulk_planet[k] for k, v in alphas.items()}
-        mantle_only_concentrations = {k:v for k, v in bulk_planet.items() if k not in alphas.keys()}
-        silicate = partitioned_silicate_concentrations
-        pass
+                raise ValueError(
+                    f"{k} alpha value must be a float where 0 < alpha < 1"
+                )
+
+        # --- Putirka & Rarick (2019) algorithm ---
+        # 1. Fe and Ni BSP concentrations set directly from their alphas.
+        fe_bsp = alphas["Fe"] * bulk_wtpt_elements["Fe"]
+        ni_bsp = alphas.get("Ni", 1.0) * bulk_wtpt_elements.get("Ni", 0.0)
+
+        # 2. Remaining mass budget for all other (lithophile) elements.
+        remaining_mass = 100.0 - fe_bsp - ni_bsp
+
+        # 3. Sum of BP element wt% for all elements except Fe and Ni.
+        sum_lithophile_bp = sum(
+            v for k, v in bulk_wtpt_elements.items() if k not in ("Fe", "Ni")
+        )
+
+        # 4. Build BSP element wt%: Fe/Ni are set directly; everything else
+        #    is rescaled proportionally to fill the remaining mass.
+        bsp_elements = {}
+        for k, v in bulk_wtpt_elements.items():
+            if k == "Fe":
+                bsp_elements[k] = fe_bsp
+            elif k == "Ni":
+                bsp_elements[k] = ni_bsp
+            else:
+                bsp_elements[k] = remaining_mass * v / sum_lithophile_bp
+
+        # 5. Convert BSP element wt% → wt% oxides (normalizes to 100).
+        self._bulk_silicate_planet = conv.convert_to_wtpt_oxides(
+            bsp_elements, "wtpt_elements"
+        )
+        return self._bulk_silicate_planet
+
 
     # def _calculate_bulk_from_silicate(bulk_silicate_planet, alphas):
     #     """

@@ -36,9 +36,7 @@ class Star(object):
         if stellar_dex is not None:
             unrecognized_keys = []
             for k in stellar_dex.keys():
-                if k in const.oxides_to_elements.keys():
-                    raise ValueError("stellar_dex cannot have values in oxides.")
-                if k not in const.elements_to_oxides.keys():
+                if k not in const.elements_to_oxides.keys() and k not in const.oxides_to_elements.keys():
                     unrecognized_keys.append(k)
             if len(unrecognized_keys) > 0:
                 w.warn(f"{unrecognized_keys} were not recognized as compositional parameters and "

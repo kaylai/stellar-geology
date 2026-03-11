@@ -75,28 +75,34 @@ def test_silicate_from_bulk():
     # known bulk silicate  composition of C #5 Ringwood from the Hypatia catalog
     # (Hinkel et al. 2014) as reported in Putirka and Rarick (2019)
     C5Ringwood_wtptOxides = {
-            'SiO2'  : 34.32286206,
-            'TiO2'  : 0.12893983,
-            'Cr2O3' : 2.65164733,
-            'Al2O3' : 33.73554313,
-            'FeO'   : 23.99234872,
-            'MgO'   : 2.051781404,
-            'NiO'   : 0.778137357,
-            'CaO'   : 0.449816562,
-            'Na2O'  : 1.888923605,									
+            'SiO2'  : 34.3228620623356,
+            'TiO2'  : 0.1289398301558,
+            'Al2O3' : 2.6516473296260,
+            'FeO'   : 33.7355431278904,
+            'MgO'   : 23.9923487223086,
+            'CaO'   : 2.0517814044420,
+            'Na2O'  : 0.7781373566196,
+            'Cr2O3' : 0.4498165616991,
+            'NiO'   : 1.8889236049229,									
             }
     # alphas from Putirka and Rarick (2019) Supplementary spreadsheet 2
     alphas = {"Fe": 0.494, "Ni": 0.08, "Si": 0.98}
     expected_silicate_planet = {
-        'SiO2'  : 45.06235842,
-        'TiO2'  :0.169284625,
-        'Al2O3' :3.481337954,
-        'FeO'  : 15.34248226,
-        'MgO'  : 31.49946574,
-        'CaO'  : 2.693776203,
-        'Na2O'  : 1.021613652,
-        'Cr2O3'  : 0.590562497,
-        'NiO'  : 0.13911865,
+        'SiO2'  : 45.0623584204862,
+        'TiO2'  : 0.1692846252333,
+        'Al2O3' : 3.4813379535577,
+        'FeO'   : 15.3424822627129,
+        'MgO'   : 31.4994657354165,
+        'CaO'   : 2.6937762031481,
+        'Na2O'  : 1.0216136521680,
+        'Cr2O3' : 0.5905624970884,
+        'NiO'   : 0.1391186501890,
     }
     p = Planet(bulk_planet=C5Ringwood_wtptOxides, alphas=alphas)
-    assert p.bulk_silicate_planet == pytest.approx(expected_silicate_planet)
+    # rel=1e-4 accounts for small differences in molecular weight constants
+    # between our code and the Putirka & Rarick (2019) spreadsheet
+    assert p.bulk_silicate_planet == pytest.approx(expected_silicate_planet, rel=1e-4)
+
+def test_mantle_CIPW_norm():
+    # TODO test for calculating CIPW norm from mantle (bulk_silicate_planet) composition.
+    pass

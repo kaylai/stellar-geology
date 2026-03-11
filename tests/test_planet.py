@@ -39,4 +39,7 @@ def test_bsp_alpha_dex_raises():
         Planet(bulk_silicate_planet={"SiO2": 50.0},
                alphas={'Fe':0.5},
                stellar_dex={"Si": 0.1})
-    
+
+def test_calculate_silicate_from_bulk_noFe():
+    with pytest.raises(ValueError):
+        Planet(bulk_planet={"SiO2": 45}, alphas=[]).bulk_silicate_planet
