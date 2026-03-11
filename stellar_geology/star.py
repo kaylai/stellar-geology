@@ -3,6 +3,8 @@ from . import constants as const
 import warnings as w
 
 class Star(object):
+    # TODO: add `units` param to __init__ so users can pass compositions in
+    # any supported unit, not just dex. Internally convert to dex on init.
     def __init__(self, stellar_dex=None, name=None, mass=None):
         """
         None required. Would return an empty Star() object with no attributes.
@@ -133,4 +135,53 @@ class Star(object):
             self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
             self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
             return conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
-    
+
+    def get_composition(self, units='wtpt_oxides', normalization=None):
+        """
+        Return the star's composition in the requested units with optional
+        normalization.
+
+        Parameters
+        ----------
+        units : str
+            One of 'wtpt_oxides', 'wtpt_elements', 'wtfrac_oxides',
+            'wtfrac_elements', 'molfrac_oxides', 'molfrac_elements',
+            'molfrac_singleO', 'molpt_oxides', 'molpt_elements'.
+        normalization : str or None
+            One of None, 'none', 'standard', 'fixedvolatiles',
+            'additionalvolatiles'.
+
+        Returns
+        -------
+        dict or None
+            Composition in the requested units, or None if no stellar_dex is set.
+
+        Notes
+        -----
+        Star element outputs (wtpt_elements, wtfrac_elements) include volatile
+        elements (C, O, S) from the stellar pipeline. These are not available
+        in oxide-based conversions.
+        """
+        if self._stellar_dex is None:
+            return None
+
+        if units not in conv.VALID_UNITS:
+            raise ValueError(f"units must be one of {conv.VALID_UNITS}, got '{units}'.")
+
+        # Special case: element wt outputs include volatile elements (C, O, S)
+        # from the stellar pipeline that aren't present in oxide-based conversions
+        if units == 'wtpt_elements':
+            result = dict(self.wtptElements)
+        elif units == 'wtfrac_elements':
+            result = {k: v / 100.0 for k, v in self.wtptElements.items()}
+        else:
+            result = conv.convert_composition(self.wtptOxides, units)
+
+        if normalization is not None and normalization != 'none':
+            if units == 'molfrac_singleO':
+                w.warn("Normalization is not supported for units='molfrac_singleO' "
+                       "and will be ignored.", category=UserWarning)
+            else:
+                result = conv.normalize_composition(result, normalization, units)
+
+        return result
