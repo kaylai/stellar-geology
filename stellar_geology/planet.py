@@ -7,7 +7,7 @@ import warnings as w
 class Planet(object):
     def __init__(self, bulk_planet=None, bulk_silicate_planet=None,
                  stellar_dex=None, alphas=None, name=None, mass=None,
-                 units='wtpt_oxides'):
+                 mineralogy=None, units='wtpt_oxides'):
         """
         Returns a Planet() object.
 
@@ -38,6 +38,10 @@ class Planet(object):
             Planet mass in some units that I don't know because this isn't
             implemented yet. So, put whatever float you want here. It won't
             make any difference.
+        mineralogy : Mineralogy() object
+            Not yet implemented to do anything if this is input. Must be
+            generated with calculate_mineralogy(). In future will be stored
+            as Planet attr.
         units : str
             Units of the bulk_planet and bulk_silicate_planet dicts. Defaults
             to 'wtpt_oxides'. Any valid unit string is accepted (e.g.,
@@ -304,31 +308,5 @@ class Planet(object):
             bsp_elements, "wtpt_elements"
         )
         return self._bulk_silicate_planet
-
-
-    # def _calculate_bulk_from_silicate(bulk_silicate_planet, alphas):
-    #     """
-    #     Calculates the bulk planet composition given known bulk silicate composition
-    #     and the alphas ratio for partitioning bulk Fe between the core and mantle,
-    #     as defined in Putirka and Rarick (2019).
-        
-    #     Parameters
-    #     ----------
-    #     bulk_silicate_planet:    dict
-    #         Bulk silicate planet composition in wt% oxides.
-    #     alphas:    float
-    #         Ratio of Fe in the bulk silicate planet and bulk planet, defined
-    #         in Putirka and Rarick (2019): alphas = FeBSP/FeBP. Will always
-    #         be a positive fraction <1.
-        
-    #     Returns
-    #     -------
-    #     dict
-    #         Bulk planet composition in wt% oxides.
-    #     """
-    #     planet_C5Ringwood_silicate = planet_C5Ringwood.get_composition(which="bulk_planet", units="wtpt_elements")
-    #     for k, v in alphas.items():
-    #         planet_C5Ringwood_silicate[k] = v*planet_C5Ringwood_silicate[k]
-    #     return alphas * bulk_planet  
         
         
