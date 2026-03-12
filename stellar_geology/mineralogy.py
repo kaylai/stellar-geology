@@ -100,8 +100,6 @@ def calculate_mineralogy(silicate_composition, units='wtpt_oxides'):
     result = mol_frac_cipw_series.reindex(mineral_transformations_inv.index) @ mineral_transformations_inv
     
     mineralogy = dict(result)
-    print(mineralogy.values())
-    print(sum(list(mineralogy.values())))
     
     return mineralogy
     
