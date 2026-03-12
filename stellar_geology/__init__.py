@@ -10,7 +10,7 @@ __author__ = "Kayla Iacovino"
 from .star import Star
 from .planet import Planet
 from .constants import *
-from .mineralogy import calculate_mineralogy, plot_norm
+from .mineralogy import calculate_mineralogy, calculate_composition_from_mineralogy, plot_norm
 
 __all__ = [
     # Classes
@@ -20,6 +20,7 @@ __all__ = [
     # Functions
     'createPlanet',
     'calculate_mineralogy',
+    'calculate_composition_from_mineralogy',
     'plot_norm',
     # Constants
     'oxides_to_elements',

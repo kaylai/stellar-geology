@@ -1,6 +1,9 @@
 import pytest
-from stellar_geology.mineralogy import calculate_mineralogy, _calculate_mol_prop_ox_cipw
-from stellar_geology.mineralogy import _calculate_mol_frac_cipw, plot_norm
+from stellar_geology.mineralogy import (calculate_mineralogy,
+                                       calculate_composition_from_mineralogy,
+                                       _calculate_mol_prop_ox_cipw,
+                                       _calculate_mol_frac_cipw, plot_norm)
+from stellar_geology import constants as const
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -72,4 +75,35 @@ def test_plot_norm():
 def test_plot_norm_insufficient_keys_raises():
     with pytest.raises(ValueError):
         plot_norm({"olivine": 55.0, "clinopyroxene": -2.0})
-    
+
+# ---------------------------------------------------------------------------
+# Reverse pipeline: mineralogy → bulk silicate composition
+# ---------------------------------------------------------------------------
+def test_round_trip_mineralogy():
+    """Forward then reverse with correct Mg# recovers the 5 CIPW oxides."""
+    mineralogy = calculate_mineralogy(silicate_composition=BULK_PLANET_OXIDES)
+
+    # Compute the true Mg# from the original composition
+    mg_mol = BULK_PLANET_OXIDES["MgO"] / const.oxideMass["MgO"]
+    fe_mol = BULK_PLANET_OXIDES["FeO"] / const.oxideMass["FeO"]
+    mg_number = mg_mol / (mg_mol + fe_mol)
+
+    recovered = calculate_composition_from_mineralogy(mineralogy, mg_number=mg_number)
+
+    # The forward pipeline only uses 5 oxides, so normalize the original to those
+    cipw_oxides = ["SiO2", "Al2O3", "FeO", "MgO", "CaO"]
+    original_cipw = {k: v for k, v in BULK_PLANET_OXIDES.items() if k in cipw_oxides}
+    original_sum = sum(original_cipw.values())
+    original_normed = {k: 100.0 * v / original_sum for k, v in original_cipw.items()}
+
+    assert recovered == pytest.approx(original_normed, rel=1e-6)
+
+def test_reverse_mineralogy_missing_phase():
+    with pytest.raises(ValueError, match="Missing required mineral phases"):
+        calculate_composition_from_mineralogy({"olivine": 0.5, "garnet": 0.1})
+
+def test_reverse_mineralogy_bad_mg_number():
+    with pytest.raises(ValueError, match="mg_number"):
+        calculate_composition_from_mineralogy(EXPECTED_MINERALOGY, mg_number=0.0)
+    with pytest.raises(ValueError, match="mg_number"):
+        calculate_composition_from_mineralogy(EXPECTED_MINERALOGY, mg_number=1.5)
