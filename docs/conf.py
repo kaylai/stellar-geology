@@ -28,7 +28,6 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx_gallery.gen_gallery",
     "myst_parser",
-    "sphinx_design",
 ]
 
 # -- Options for sphinx-gallery ----------------------------------------------
