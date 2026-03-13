@@ -36,6 +36,8 @@ docs = [
 
 dev = [
     "mypy",
+    "pytest",
+    "pandas-stubs",
 ]
 
 [tool.mypy]
