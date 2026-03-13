@@ -3,15 +3,25 @@ planetary bulk and silicate compositions derived from stellar data or
 direct geochemical inputs.
 """
 
+from __future__ import annotations
+
+from typing import Any, TYPE_CHECKING
+
 from . import conversions as conv
 from . import constants as const
 import warnings as w
 
+if TYPE_CHECKING:
+    from .star import Star
+
 
 class Planet(object):
-    def __init__(self, bulk_planet=None, bulk_silicate_planet=None,
-                 stellar_dex=None, alphas=None, name=None, mass=None,
-                 mineralogy=None, units='wtpt_oxides'):
+    def __init__(self, bulk_planet: dict[str, float] | None = None,
+                 bulk_silicate_planet: dict[str, float] | None = None,
+                 stellar_dex: dict[str, float] | None = None,
+                 alphas: dict[str, float] | None = None,
+                 name: str | None = None, mass: float | None = None,
+                 mineralogy: Any = None, units: str = 'wtpt_oxides') -> None:
         """
         Returns a Planet() object.
 
@@ -22,14 +32,14 @@ class Planet(object):
         it will raise an Error. Just pass one, and the others will be auto-
         matically computed for you. Like magic.
 
-        bulk_planet : dict
+        bulk_planet : dict[str, float]
             Bulk planet composition. Units specified by the `units` parameter.
-        bulk_silicate_planet : dict
+        bulk_silicate_planet : dict[str, float]
             Bulk silicate planet composition. Units specified by the `units`
             parameter.
-        stellar_dex : dict
+        stellar_dex : dict[str, float]
             Star composition in dex notation.
-        alphas : dict[str: float]
+        alphas : dict[str, float]
             Ratio of element in the bulk silicate planet and bulk planet, defined
             in Putirka and Rarick (2019): e.g., alphas = FeBSP/FeBP. Will always
             be a positive fraction <1. Used for defining which elements partition
@@ -94,8 +104,8 @@ class Planet(object):
                              "and stellar_dex, as values may be contradictory.")
         
     @property
-    def bulk_planet(self):
-        """dict or None : Bulk planet composition in wt% oxides.
+    def bulk_planet(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Bulk planet composition in wt% oxides.
 
         Auto-calculated from ``stellar_dex`` or
         ``bulk_silicate_planet`` + ``alphas`` if not provided directly.
@@ -122,20 +132,21 @@ class Planet(object):
         return None
 
     @property
-    def bulk_silicate_planet(self):
-        """dict or None : Bulk silicate planet composition in wt% oxides.
+    def bulk_silicate_planet(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Bulk silicate planet composition in wt% oxides.
 
         Auto-calculated from ``bulk_planet`` + ``alphas`` if not provided
         directly.
         """
         if self._bulk_silicate_planet is not None:
             return self._bulk_silicate_planet
-        if self._bulk_planet is not None and self._alphas is not None:
+        bulk = self.bulk_planet
+        if bulk is not None and self._alphas is not None:
             self._bulk_silicate_planet = self._calculate_silicate_from_bulk(
-                bulk_planet=self._bulk_planet,alphas=self._alphas)
+                bulk_planet=bulk, alphas=self._alphas)
             return self._bulk_silicate_planet
         # Explain what's missing
-        if self._bulk_planet is not None and self._alphas is None:
+        if bulk is not None and self._alphas is None:
             w.warn("bulk_silicate_planet cannot be computed: "
                    "bulk_planet was provided but alphas is missing.",
                    category=UserWarning)
@@ -146,8 +157,8 @@ class Planet(object):
         return None
 
     @property
-    def stellar_dex(self):
-        """dict or None : Stellar composition in dex notation.
+    def stellar_dex(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Stellar composition in dex notation.
 
         Auto-calculated from ``bulk_planet`` if not provided directly.
         """
@@ -162,8 +173,8 @@ class Planet(object):
         return None
 
     @property
-    def alphas(self):
-        """dict or None : Element partitioning ratios (BSP/BP) for core formation.
+    def alphas(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Element partitioning ratios (BSP/BP) for core formation.
 
         Auto-calculated from ``bulk_planet`` + ``bulk_silicate_planet`` if
         not provided directly.
@@ -186,17 +197,17 @@ class Planet(object):
         return None
     
     @property
-    def name(self):
+    def name(self) -> str | None:
         """str or None : Planet name."""
         return self._name
 
     @property
-    def mass(self):
+    def mass(self) -> float | None:
         """float or None : Planet mass (not yet implemented)."""
         return self._mass
 
     @classmethod
-    def from_star(cls, star, **kwargs):
+    def from_star(cls, star: Star, **kwargs: Any) -> Planet:
         """Create a Planet from a :class:`~stellar_geology.star.Star` object.
 
         Parameters
@@ -211,7 +222,8 @@ class Planet(object):
         """
         return cls(stellar_dex=star.stellar_dex, **kwargs)
 
-    def get_composition(self, which, units='wtpt_oxides', normalization=None):
+    def get_composition(self, which: str, units: str = 'wtpt_oxides',
+                        normalization: str | None = None) -> dict[str, float] | None:
         """
         Return the planet's composition in the requested units with optional
         normalization.
@@ -230,7 +242,7 @@ class Planet(object):
 
         Returns
         -------
-        dict or None
+        dict[str, float] or None
             Composition in the requested units, or None if the base composition
             is not available.
 
@@ -265,7 +277,8 @@ class Planet(object):
         return result
 
     #--- CALCULATIONS BETWEEN BULK PLANET AND BULK SILICATE PLANET ---#
-    def _calculate_silicate_from_bulk(self, bulk_planet, alphas):
+    def _calculate_silicate_from_bulk(self, bulk_planet: dict[str, float],
+                                         alphas: dict[str, float]) -> dict[str, float]:
         """
         Calculates the bulk silicate composition given known bulk composition and
         the alphas ratio for partitioning bulk Fe between the core and mantle, as
@@ -280,9 +293,9 @@ class Planet(object):
 
         Parameters
         ----------
-        bulk_planet:    dict
+        bulk_planet:    dict[str, float]
             Bulk planet composition in wt% oxides. Must contain value for FeO.
-        alphas:    dict{str: float}
+        alphas:    dict[str, float]
                 Ratio of element in the bulk silicate planet and bulk planet, defined
                 in Putirka and Rarick (2019): e.g., alphas = FeBSP/FeBP. Will always
                 be a positive fraction <1. Used for defining which elements partition
@@ -291,7 +304,7 @@ class Planet(object):
 
         Returns
         -------
-        dict
+        dict[str, float]
             Bulk silicate planet composition in wt% oxides.
         """
         # TODO consider failure cases for other lack of keys (Ni?), units, etc...
@@ -306,6 +319,11 @@ class Planet(object):
         bulk_wtpt_elements = self.get_composition(
             which="bulk_planet", units="wtpt_elements"
         )
+        if bulk_wtpt_elements is None:
+            raise ValueError(
+                "Could not compute bulk planet element composition. "
+                "Ensure bulk_planet is set before calculating silicate."
+            )
 
         # Validate alpha values
         for k, v in alphas.items():

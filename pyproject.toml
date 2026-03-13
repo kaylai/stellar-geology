@@ -29,6 +29,16 @@ docs = [
     "matplotlib",
 ]
 
+dev = [
+    "mypy",
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
 [project.urls]
 Homepage = "https://github.com/kaylai/stellar-geology"
 Repository = "https://github.com/kaylai/stellar-geology"

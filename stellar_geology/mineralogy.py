@@ -31,7 +31,7 @@ MINERAL_TRANSFORMATIONS_INV = pd.DataFrame(
     columns=MINERAL_TRANSFORMATIONS.index
 )
 
-def calculate_mineralogy(silicate_composition, units='wtpt_oxides'):
+def calculate_mineralogy(silicate_composition: dict[str, float], units: str = 'wtpt_oxides') -> dict[str, float]:
     """
     Calculates the CIPW normative mineralogy for olivine (ol), clinopyroxene (cpx), orthopyroxene
     (opx), and garnet (gar). Uses equations of Thompson (1982) "Reaction space: An algebraic and
@@ -39,7 +39,7 @@ def calculate_mineralogy(silicate_composition, units='wtpt_oxides'):
 
     Parameters
     ----------
-    silicate_composition : dict
+    silicate_composition : dict[str, float]
         Dictionary of chemical components describing a bulk silicate composition. Must include, at
         a minimum, keys for SiO2, Al2O3, FeO, MgO, and CaO (any units).
     units : str
@@ -49,7 +49,7 @@ def calculate_mineralogy(silicate_composition, units='wtpt_oxides'):
 
     Returns
     -------
-    dict
+    dict[str, float]
         Normative mineralogy with keys "olivine", "clinopyroxene", "orthopyroxene", "garnet".
     """
     if units not in conv.VALID_UNITS:
@@ -70,13 +70,13 @@ def calculate_mineralogy(silicate_composition, units='wtpt_oxides'):
     
     return dict(result)
     
-def _calculate_mol_prop_ox_cipw(silicate_composition):
+def _calculate_mol_prop_ox_cipw(silicate_composition: dict[str, float]) -> dict[str, float]:
     xtal_oxides = ["SiO2", "Al2O3", "FeO", "MgO", "CaO"]
     mol_prop_ox_cipw = {ox: (silicate_composition[ox] * const.CationNum[ox]) /
                         const.oxideMass[ox] for ox in xtal_oxides}
     return mol_prop_ox_cipw
 
-def _calculate_mol_frac_cipw(mol_prop_ox_cipw):
+def _calculate_mol_frac_cipw(mol_prop_ox_cipw: dict[str, float]) -> dict[str, float]:
     mpoc = mol_prop_ox_cipw
     # direct copy for Si, Al, Ca
     mol_frac_cipw = {k: v/sum(list(mpoc.values())) for k, v in mpoc.items() if k not in ["FeO", "MgO"]}
@@ -85,7 +85,7 @@ def _calculate_mol_frac_cipw(mol_prop_ox_cipw):
 
     return mol_frac_cipw
 
-def _mol_frac_cipw_to_wtpt_oxides(mol_prop_ox_cipw):
+def _mol_frac_cipw_to_wtpt_oxides(mol_prop_ox_cipw: dict[str, float]) -> dict[str, float]:
     """
     Converts CIPW mol fractions back to wt% oxides. This is the reverse of
     _calculate_mol_prop_ox_cipw followed by normalization.
@@ -96,13 +96,13 @@ def _mol_frac_cipw_to_wtpt_oxides(mol_prop_ox_cipw):
 
     Parameters
     ----------
-    mol_prop_ox_cipw : dict
+    mol_prop_ox_cipw : dict[str, float]
         Dictionary of oxide mol proportions with keys SiO2, Al2O3, FeO, MgO, CaO.
         Values need not sum to 1; they are renormalized internally.
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition as wt% oxides normalized to 100.
     """
     wt_raw = {ox: mf * const.oxideMass[ox] / const.CationNum[ox]
@@ -110,7 +110,7 @@ def _mol_frac_cipw_to_wtpt_oxides(mol_prop_ox_cipw):
     wt_sum = sum(wt_raw.values())
     return {ox: 100.0 * v / wt_sum for ox, v in wt_raw.items()}
 
-def calculate_composition_from_mineralogy(mineralogy, mg_number=0.89):
+def calculate_composition_from_mineralogy(mineralogy: dict[str, float], mg_number: float = 0.89) -> dict[str, float]:
     """
     Recovers a bulk silicate planet composition (wt% oxides) from CIPW normative mineralogy.
     This is the partial inverse of calculate_mineralogy().
@@ -124,7 +124,7 @@ def calculate_composition_from_mineralogy(mineralogy, mg_number=0.89):
 
     Parameters
     ----------
-    mineralogy : dict
+    mineralogy : dict[str, float]
         Dictionary with keys "olivine", "clinopyroxene", "orthopyroxene", "garnet"
         and float values (mol fractions, as returned by calculate_mineralogy).
     mg_number : float
@@ -133,7 +133,7 @@ def calculate_composition_from_mineralogy(mineralogy, mg_number=0.89):
 
     Returns
     -------
-    dict
+    dict[str, float]
         Bulk silicate composition as wt% oxides (SiO2, Al2O3, FeO, MgO, CaO),
         normalized to 100.
     """
@@ -159,20 +159,20 @@ def calculate_composition_from_mineralogy(mineralogy, mg_number=0.89):
 
     return _mol_frac_cipw_to_wtpt_oxides(mol_prop_ox_cipw)
 
-def plot_norm(mineralogy):
+def plot_norm(mineralogy: dict[str, float]) -> dict[str, float]:
     """
     Normalizes mineralogy to only olivine, clinopyroxene, and orthopyroxene for ternary plotting.
     
     Parameters
     ----------
-    mineralogy : dict[str:float]
+    mineralogy : dict[str, float]
         Dictionary with key:value pairs as mineral name: proportion. Requires at minimum "olivine",
-        "clinopyroxene", and "orthopyroxene". All other key:value pairs will be ignored. Put 
+        "clinopyroxene", and "orthopyroxene". All other key:value pairs will be ignored. Put
         whatever you want there, I don't care. But you won't get it returned to you.
-    
+
     Returns
     -------
-    dict
+    dict[str, float]
         Mineralogy normalized to ol, opx, and cpx only.
     """
     required_phases = ["olivine", "clinopyroxene", "orthopyroxene"]

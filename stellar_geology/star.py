@@ -9,13 +9,13 @@ import warnings as w
 class Star(object):
     # TODO: add `units` param to __init__ so users can pass compositions in
     # any supported unit, not just dex. Internally convert to dex on init.
-    def __init__(self, stellar_dex=None, name=None, mass=None):
+    def __init__(self, stellar_dex: dict[str, float] | None = None, name: str | None = None, mass: float | None = None) -> None:
         """
         None required. Would return an empty Star() object with no attributes.
 
         Parameters
         ----------
-        stellar_dex:    dict
+        stellar_dex:    dict[str, float]
             Stellar composition in dex notation, as elements.
         name: str
             Arbitrary name for your planet as a string. Can be anything. Either
@@ -23,19 +23,19 @@ class Star(object):
         mass:   float
             Planet mass in some units that I don't know because this isn't
             implemented yet. So, put whatever float you want here. It won't
-            make any difference. 
+            make any difference.
         """
         self._stellar_dex = stellar_dex
         self._name = name
         self._mass = mass
-        
+
         # calculated attributes
         # typically not needed by user, used for benchmarking and debugging
-        self._ax = None
-        self._atomsRefSolar = None
-        self._totalWtAtoms = None
-        self._wtptElements = None
-        self._wtptOxides = None
+        self._ax: dict[str, float] | None = None
+        self._atomsRefSolar: dict[str, float] | None = None
+        self._totalWtAtoms: dict[str, float] | None = None
+        self._wtptElements: dict[str, float] | None = None
+        self._wtptOxides: dict[str, float] | None = None
         
         if stellar_dex is not None:
             unrecognized_keys = []
@@ -48,105 +48,121 @@ class Star(object):
     
     
     @property
-    def stellar_dex(self):
-        """dict or None : Stellar composition in dex notation."""
-        if self._stellar_dex is not None:
-            return self._stellar_dex
+    def stellar_dex(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Stellar composition in dex notation."""
+        return self._stellar_dex
 
     @property
-    def name(self):
+    def name(self) -> str | None:
         """str or None : Star name."""
-        if self._name is not None:
-            return self._name
+        return self._name
 
     @property
-    def mass(self):
+    def mass(self) -> float | None:
         """float or None : Star mass (not yet implemented)."""
-        if self._mass is not None:
-            return self._mass
+        return self._mass
 
     @property
-    def ax(self):
-        """dict or None : Elemental ratio relative to solar (10^dex)."""
+    def ax(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Elemental ratio relative to solar (10^dex)."""
         if self._ax is not None:
             return self._ax
         if self._stellar_dex is not None:
             self._ax = conv.calculate_ax_from_dex(self._stellar_dex)
             return self._ax
+        return None
 
     @property
-    def atomsRefSolar(self):
-        """dict or None : Number of atoms referenced to solar abundances."""
+    def atomsRefSolar(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Number of atoms referenced to solar abundances."""
         if self._atomsRefSolar is not None:
             return self._atomsRefSolar
         if self._ax is not None:
-            return conv.calculate_atomsRefSolar_from_ax(self._ax)
+            self._atomsRefSolar = conv.calculate_atomsRefSolar_from_ax(self._ax)
+            return self._atomsRefSolar
         if self._stellar_dex is not None:
             self._ax = conv.calculate_ax_from_dex(self._stellar_dex)
-            return conv.calculate_atomsRefSolar_from_ax(self._ax)
+            self._atomsRefSolar = conv.calculate_atomsRefSolar_from_ax(self._ax)
+            return self._atomsRefSolar
+        return None
 
     @property
-    def totalWtAtoms(self):
-        """dict or None : Total weight of atoms (element wt scaled by atomic mass)."""
+    def totalWtAtoms(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Total weight of atoms (element wt scaled by atomic mass)."""
         if self._totalWtAtoms is not None:
             return self._totalWtAtoms
         if self._atomsRefSolar is not None:
-            return conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
+            self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
+            return self._totalWtAtoms
         if self._ax is not None:
             self._atomsRefSolar = conv.calculate_atomsRefSolar_from_ax(self._ax)
-            return conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
+            self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
+            return self._totalWtAtoms
         if self._stellar_dex is not None:
             self._ax = conv.calculate_ax_from_dex(self._stellar_dex)
             self._atomsRefSolar = conv.calculate_atomsRefSolar_from_ax(self._ax)
-            return conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
-    
+            self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
+            return self._totalWtAtoms
+        return None
+
     @property
-    def wtptElements(self):
-        """dict or None : Composition as wt% elements (includes volatiles C, O, S)."""
+    def wtptElements(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Composition as wt% elements (includes volatiles C, O, S)."""
         if self._wtptElements is not None:
             return self._wtptElements
         if self._totalWtAtoms is not None:
-            return conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
+            self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
+            return self._wtptElements
         if self._atomsRefSolar is not None:
             self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
-            return conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
+            self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
+            return self._wtptElements
         if self._ax is not None:
             self._atomsRefSolar = conv.calculate_atomsRefSolar_from_ax(self._ax)
             self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
-            return conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
+            self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
+            return self._wtptElements
         if self._stellar_dex is not None:
             self._ax = conv.calculate_ax_from_dex(self._stellar_dex)
             self._atomsRefSolar = conv.calculate_atomsRefSolar_from_ax(self._ax)
             self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
-            return conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
-    
+            self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
+            return self._wtptElements
+        return None
+
     @property
-    def wtptOxides(self):
-        """dict or None : Composition as wt% oxides (volatile-free)."""
+    def wtptOxides(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Composition as wt% oxides (volatile-free)."""
         if self._wtptOxides is not None:
             return self._wtptOxides
         if self._wtptElements is not None:
-            return conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            self._wtptOxides = conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            return self._wtptOxides
         if self._totalWtAtoms is not None:
             self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
-            return conv.calculate_wtptOxides_from_wtptElements(self._wtptElements) 
+            self._wtptOxides = conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            return self._wtptOxides
         if self._atomsRefSolar is not None:
             self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
             self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
-            return conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            self._wtptOxides = conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            return self._wtptOxides
         if self._ax is not None:
             self._atomsRefSolar = conv.calculate_atomsRefSolar_from_ax(self._ax)
             self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
             self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
-            return conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            self._wtptOxides = conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            return self._wtptOxides
         if self._stellar_dex is not None:
             self._ax = conv.calculate_ax_from_dex(self._stellar_dex)
             self._atomsRefSolar = conv.calculate_atomsRefSolar_from_ax(self._ax)
             self._totalWtAtoms = conv.calculate_totalWtAtoms_from_atomsRefSolar(self._atomsRefSolar)
             self._wtptElements = conv.calcualte_wtptElements_from_totalWtAtoms(self._totalWtAtoms)
-            return conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            self._wtptOxides = conv.calculate_wtptOxides_from_wtptElements(self._wtptElements)
+            return self._wtptOxides
+        return None
 
-    def get_composition(self, units='wtpt_oxides', normalization=None):
+    def get_composition(self, units: str = 'wtpt_oxides', normalization: str | None = None) -> dict[str, float] | None:
         """
         Return the star's composition in the requested units with optional
         normalization.
@@ -163,7 +179,7 @@ class Star(object):
 
         Returns
         -------
-        dict or None
+        dict[str, float] or None
             Composition in the requested units, or None if no stellar_dex is set.
 
         Notes
@@ -180,12 +196,19 @@ class Star(object):
 
         # Special case: element wt outputs include volatile elements (C, O, S)
         # from the stellar pipeline that aren't present in oxide-based conversions
-        if units == 'wtpt_elements':
-            result = dict(self.wtptElements)
-        elif units == 'wtfrac_elements':
-            result = {k: v / 100.0 for k, v in self.wtptElements.items()}
+        if units in ('wtpt_elements', 'wtfrac_elements'):
+            wt_elements = self.wtptElements
+            if wt_elements is None:
+                return None
+            if units == 'wtpt_elements':
+                result = dict(wt_elements)
+            else:
+                result = {k: v / 100.0 for k, v in wt_elements.items()}
         else:
-            result = conv.convert_composition(self.wtptOxides, units)
+            wt_oxides = self.wtptOxides
+            if wt_oxides is None:
+                return None
+            result = conv.convert_composition(wt_oxides, units)
 
         if normalization is not None and normalization != 'none':
             if units == 'molfrac_singleO':

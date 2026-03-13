@@ -4,21 +4,21 @@ Chemistry conversion functions imported by planet and star
 
 from . import constants as const
 
-def calculate_bulk_planet_from_dex(stellar_dex):
+def calculate_bulk_planet_from_dex(stellar_dex: dict[str, float]) -> dict[str, float]:
     """
     Runs all intermediate calculations to go directly from star composition in
     dex notation to bulk planet in wt% oxides. This is the most common use case,
     but allows the other intermediate methods to be exposed for benchmarking and
     debugging.
-    
+
     Parameters
     ----------
-    stellar_dex: dict
+    stellar_dex: dict[str, float]
         Star composition in dex notation.
-        
+
     Returns
     -------
-    dict
+    dict[str, float]
         Bulk planet composition in wt% oxides.
     """
     ax = calculate_ax_from_dex(stellar_dex)
@@ -30,12 +30,12 @@ def calculate_bulk_planet_from_dex(stellar_dex):
     return wtptOxides
 
 #--- INTERMEDIATE CALCULATIONS BETWEEN DEX NOTATION AND BULK PLANET OXIDES ---#
-def calculate_ax_from_dex(stellar_dex):
+def calculate_ax_from_dex(stellar_dex: dict[str, float]) -> dict[str, float]:
     """
     Convert from dex system notation to elemental ratio relative to solar
 
     Args:
-        composition (dict)
+        composition (dict[str, float])
     """
     ax = {}
     dex_elems = list(stellar_dex.keys())
@@ -48,7 +48,7 @@ def calculate_ax_from_dex(stellar_dex):
     
     return ax
     
-def calculate_atomsRefSolar_from_ax(ax):
+def calculate_atomsRefSolar_from_ax(ax: dict[str, float]) -> dict[str, float]:
     atomsRefSolar = {}
     ax_elems = list(ax.keys())
     
@@ -57,7 +57,7 @@ def calculate_atomsRefSolar_from_ax(ax):
     
     return atomsRefSolar
     
-def calculate_totalWtAtoms_from_atomsRefSolar(atomsRefSolar):
+def calculate_totalWtAtoms_from_atomsRefSolar(atomsRefSolar: dict[str, float]) -> dict[str, float]:
     totalWtAtoms = {}
     atomsRefSolar_elems = list(atomsRefSolar.keys())
     
@@ -66,7 +66,7 @@ def calculate_totalWtAtoms_from_atomsRefSolar(atomsRefSolar):
     
     return totalWtAtoms
 
-def calcualte_wtptElements_from_totalWtAtoms(totalWtAtoms):
+def calcualte_wtptElements_from_totalWtAtoms(totalWtAtoms: dict[str, float]) -> dict[str, float]:
     totalWtAtoms_sum = sum(totalWtAtoms.values())
     wtptElements = {}
     totalWtAtoms_elems = list(totalWtAtoms.keys())
@@ -76,7 +76,7 @@ def calcualte_wtptElements_from_totalWtAtoms(totalWtAtoms):
     
     return wtptElements
 
-def calculate_wtptOxides_from_wtptElements(wtptElements):
+def calculate_wtptOxides_from_wtptElements(wtptElements: dict[str, float]) -> dict[str, float]:
     wtptOxides = {}
     volatile_free_elems = list(const.elements_to_oxides.keys())
     
@@ -96,7 +96,7 @@ def calculate_wtptOxides_from_wtptElements(wtptElements):
 #--- COMPOSABLE UNIT CONVERSION SYSTEM ---#
 
 # Valid unit strings for convert_composition
-VALID_UNITS = [
+VALID_UNITS: list[str] = [
     'wtpt_oxides', 'wtpt_elements',
     'wtfrac_oxides', 'wtfrac_elements',
     'molfrac_oxides', 'molfrac_elements', 'molfrac_singleO',
@@ -104,7 +104,7 @@ VALID_UNITS = [
 ]
 
 
-def _wt_to_mol_oxides(wtpt_oxides):
+def _wt_to_mol_oxides(wtpt_oxides: dict[str, float]) -> dict[str, float]:
     """Compute raw numerators: wtpt / oxideMass for each oxide.
 
     Dividing by the sum of the result yields mole fractions.
@@ -113,7 +113,7 @@ def _wt_to_mol_oxides(wtpt_oxides):
             for oxide, wtpt in wtpt_oxides.items()}
 
 
-def _wt_to_mol_elements(wtpt_oxides):
+def _wt_to_mol_elements(wtpt_oxides: dict[str, float]) -> dict[str, float]:
     """Compute raw numerators: CationNum * wtpt / oxideMass for each element.
 
     Dividing by the sum of the result yields mole fractions of cations.
@@ -125,7 +125,7 @@ def _wt_to_mol_elements(wtpt_oxides):
     return raw
 
 
-def _wt_oxides_to_wt_elements(wtpt_oxides):
+def _wt_oxides_to_wt_elements(wtpt_oxides: dict[str, float]) -> dict[str, float]:
     """Compute raw numerators: wtpt * cationMass * CationNum / oxideMass.
 
     Dividing by the sum and multiplying by 100 yields wt% elements.
@@ -137,7 +137,7 @@ def _wt_oxides_to_wt_elements(wtpt_oxides):
     return raw
 
 
-def _wt_to_mol_singleO(wtpt_oxides):
+def _wt_to_mol_singleO(wtpt_oxides: dict[str, float]) -> dict[str, float]:
     """Convert wt% oxides to moles of cations per single oxygen atom.
 
     Normalized per oxygen atom, not by sum of cations.
@@ -155,7 +155,7 @@ def _wt_to_mol_singleO(wtpt_oxides):
     return {k: v / total_O for k, v in cation_moles.items()}
 
 
-def convert_composition(wtpt_oxides, units):
+def convert_composition(wtpt_oxides: dict[str, float], units: str) -> dict[str, float]:
     """Convert a composition in wt% oxides to any supported unit system.
 
     This is the main dispatcher for all unit conversions. It takes a canonical
@@ -166,7 +166,7 @@ def convert_composition(wtpt_oxides, units):
 
     Parameters
     ----------
-    wtpt_oxides : dict
+    wtpt_oxides : dict[str, float]
         Composition in wt% oxides (oxide keys, values summing to ~100).
     units : str
         Target unit string. One of: 'wtpt_oxides', 'wtpt_elements',
@@ -176,7 +176,7 @@ def convert_composition(wtpt_oxides, units):
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition in the requested units.
 
     Raises
@@ -192,6 +192,7 @@ def convert_composition(wtpt_oxides, units):
         return _wt_to_mol_singleO(wtpt_oxides)
 
     # Determine the raw numerators and target scale
+    raw: dict[str, float]
     if units in ('wtpt_oxides', 'wtfrac_oxides'):
         raw = dict(wtpt_oxides)
     elif units in ('wtpt_elements', 'wtfrac_elements'):
@@ -200,6 +201,8 @@ def convert_composition(wtpt_oxides, units):
         raw = _wt_to_mol_oxides(wtpt_oxides)
     elif units in ('molfrac_elements', 'molpt_elements'):
         raw = _wt_to_mol_elements(wtpt_oxides)
+    else:
+        raise ValueError(f"Unhandled units: '{units}'")
 
     # Divide by sum and scale to target
     raw_sum = sum(raw.values())
@@ -214,7 +217,7 @@ def convert_composition(wtpt_oxides, units):
     return {k: target * v / raw_sum for k, v in raw.items()}
 
 
-def _wt_elements_to_wt_oxides(wt_elements):
+def _wt_elements_to_wt_oxides(wt_elements: dict[str, float]) -> dict[str, float]:
     """Convert element weight values to oxide weight values.
 
     Reverse of _wt_oxides_to_wt_elements. Multiply each element's weight by
@@ -231,7 +234,7 @@ def _wt_elements_to_wt_oxides(wt_elements):
     return {k: 100.0 * v / raw_sum for k, v in raw.items()}
 
 
-def convert_to_wtpt_oxides(composition, from_units):
+def convert_to_wtpt_oxides(composition: dict[str, float], from_units: str) -> dict[str, float]:
     """Convert a composition from any supported unit system back to wt% oxides.
 
     This is the inverse of convert_composition(). Takes a dict in any supported
@@ -239,14 +242,14 @@ def convert_to_wtpt_oxides(composition, from_units):
 
     Parameters
     ----------
-    composition : dict
+    composition : dict[str, float]
         Composition in the units specified by from_units.
     from_units : str
         Unit string describing the input. One of the strings in VALID_UNITS.
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition in wt% oxides, normalized to sum to 100.
 
     Raises
@@ -292,20 +295,23 @@ def convert_to_wtpt_oxides(composition, from_units):
         frac = {k: v / total for k, v in composition.items()}
         return mol_cations_to_wtpt_oxides(frac)
 
+    # Should be unreachable — all VALID_UNITS are handled above
+    raise ValueError(f"Unhandled from_units: '{from_units}'")
+
 
 #--- LEGACY UNIT CONVERSION FUNCTIONS (kept for reverse conversions) ---#
-def wtpt_oxides_to_mol_oxides(wtpt_oxides):
+def wtpt_oxides_to_mol_oxides(wtpt_oxides: dict[str, float]) -> dict[str, float]:
     """
     Convert from wt% oxides to mol fraction oxides.
 
     Parameters
     ----------
-    wtpt_oxides: dict
+    wtpt_oxides: dict[str, float]
         Composition in wt% oxides.
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition in mol fraction oxides, normalized to sum to 1.0.
     """
     mol_oxides = {}
@@ -320,18 +326,18 @@ def wtpt_oxides_to_mol_oxides(wtpt_oxides):
     return mol_oxides
 
 
-def wtpt_oxides_to_mol_cations(wtpt_oxides):
+def wtpt_oxides_to_mol_cations(wtpt_oxides: dict[str, float]) -> dict[str, float]:
     """
     Convert from wt% oxides to mol fraction cations.
 
     Parameters
     ----------
-    wtpt_oxides: dict
+    wtpt_oxides: dict[str, float]
         Composition in wt% oxides.
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition in mol fraction cations (element keys), normalized to sum
         to 1.0.
     """
@@ -348,18 +354,18 @@ def wtpt_oxides_to_mol_cations(wtpt_oxides):
     return mol_cations
 
 
-def wtpt_oxides_to_mol_singleO(wtpt_oxides):
+def wtpt_oxides_to_mol_singleO(wtpt_oxides: dict[str, float]) -> dict[str, float]:
     """
     Convert from wt% oxides to moles of cations per single oxygen atom.
 
     Parameters
     ----------
-    wtpt_oxides: dict
+    wtpt_oxides: dict[str, float]
         Composition in wt% oxides.
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition as cation moles normalized to one oxygen atom (element
         keys). Not normalized to sum to 1.0.
     """
@@ -378,18 +384,18 @@ def wtpt_oxides_to_mol_singleO(wtpt_oxides):
     return mol_singleO
 
 
-def mol_oxides_to_wtpt_oxides(mol_oxides):
+def mol_oxides_to_wtpt_oxides(mol_oxides: dict[str, float]) -> dict[str, float]:
     """
     Convert from mol fraction oxides to wt% oxides.
 
     Parameters
     ----------
-    mol_oxides: dict
+    mol_oxides: dict[str, float]
         Composition in mol fraction oxides.
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition in wt% oxides, normalized to sum to 100.
     """
     wtpt_oxides = {}
@@ -404,18 +410,18 @@ def mol_oxides_to_wtpt_oxides(mol_oxides):
     return wtpt_oxides
 
 
-def mol_cations_to_wtpt_oxides(mol_cations):
+def mol_cations_to_wtpt_oxides(mol_cations: dict[str, float]) -> dict[str, float]:
     """
     Convert from mol fraction cations to wt% oxides.
 
     Parameters
     ----------
-    mol_cations: dict
+    mol_cations: dict[str, float]
         Composition in mol fraction cations (element keys).
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition in wt% oxides, normalized to sum to 100.
     """
     wtpt_oxides = {}
@@ -431,18 +437,18 @@ def mol_cations_to_wtpt_oxides(mol_cations):
     return wtpt_oxides
 
 
-def mol_oxides_to_mol_cations(mol_oxides):
+def mol_oxides_to_mol_cations(mol_oxides: dict[str, float]) -> dict[str, float]:
     """
     Convert from mol fraction oxides to mol fraction cations.
 
     Parameters
     ----------
-    mol_oxides: dict
+    mol_oxides: dict[str, float]
         Composition in mol fraction oxides.
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition in mol fraction cations (element keys), normalized to sum
         to 1.0.
     """
@@ -459,18 +465,18 @@ def mol_oxides_to_mol_cations(mol_oxides):
     return mol_cations
 
 
-def mol_cations_to_mol_oxides(mol_cations):
+def mol_cations_to_mol_oxides(mol_cations: dict[str, float]) -> dict[str, float]:
     """
     Convert from mol fraction cations to mol fraction oxides.
 
     Parameters
     ----------
-    mol_cations: dict
+    mol_cations: dict[str, float]
         Composition in mol fraction cations (element keys).
 
     Returns
     -------
-    dict
+    dict[str, float]
         Composition in mol fraction oxides, normalized to sum to 1.0.
     """
     mol_oxides = {}
@@ -486,13 +492,13 @@ def mol_cations_to_mol_oxides(mol_cations):
     return mol_oxides
 
 
-def normalize_composition(composition, normalization, units):
+def normalize_composition(composition: dict[str, float], normalization: str, units: str) -> dict[str, float]:
     """
     Normalize a composition dict according to the specified normalization scheme.
 
     Parameters
     ----------
-    composition: dict
+    composition: dict[str, float]
         Composition to normalize.
     normalization: str
         One of 'none', 'standard', 'fixedvolatiles', 'additionalvolatiles'.
@@ -503,7 +509,7 @@ def normalize_composition(composition, normalization, units):
 
     Returns
     -------
-    dict
+    dict[str, float]
         Normalized composition.
     """
     valid_normalizations = ['none', 'standard', 'fixedvolatiles', 'additionalvolatiles']
@@ -547,3 +553,6 @@ def normalize_composition(composition, normalization, units):
             if k not in volatiles:
                 result[k] = target * result[k] / non_volatile_sum
         return result
+
+    # Should be unreachable — all valid normalizations are handled above
+    raise ValueError(f"Unhandled normalization: '{normalization}'")
