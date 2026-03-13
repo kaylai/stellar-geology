@@ -134,6 +134,14 @@ def test_name_and_mass_alongside_bulk():
     assert p.mass == 0.8
     assert p.bulk_planet is not None
 
+# ---------------------------------------------------------------------------
+# Property accessibility: pipeline for calculated attr
+# ---------------------------------------------------------------------------
+def test_access_calculated_attr():
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES, alphas=ALPHAS)
+    assert p.bulk_silicate_planet is not None
+    assert p.alphas is not None
+    assert p.bulk_planet is not None
 
 # ---------------------------------------------------------------------------
 # Init with non-default units converts to wtpt_oxides internally

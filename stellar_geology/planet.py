@@ -104,10 +104,12 @@ class Planet(object):
         if self._bulk_planet is not None:
             return self._bulk_planet
         if self._stellar_dex is not None:
-            return conv.calculate_bulk_planet_from_dex(self._stellar_dex)
+            self._bulk_planet = conv.calculate_bulk_planet_from_dex(self._stellar_dex)
+            return self._bulk_planet
         if self._bulk_silicate_planet is not None and self.alphas is not None:
-            return conv.calculate_bulk_from_silicate(self._bulk_silicate_planet,
+            self._bulk_planet = conv.calculate_bulk_from_silicate(self._bulk_silicate_planet,
                                                      self.alphas)
+            return self._bulk_planet
         # Explain what's missing
         if self._bulk_silicate_planet is not None and self._alphas is None:
             w.warn("bulk_planet cannot be computed: "
@@ -130,8 +132,9 @@ class Planet(object):
         if self._bulk_silicate_planet is not None:
             return self._bulk_silicate_planet
         if self._bulk_planet is not None and self._alphas is not None:
-            return self._calculate_silicate_from_bulk(bulk_planet=self._bulk_planet,
-                                                      alphas=self._alphas)
+            self._bulk_silicate_planet = self._calculate_silicate_from_bulk(
+                bulk_planet=self._bulk_planet,alphas=self._alphas)
+            return self._bulk_silicate_planet
         # Explain what's missing
         if self._bulk_planet is not None and self._alphas is None:
             w.warn("bulk_silicate_planet cannot be computed: "
@@ -152,10 +155,11 @@ class Planet(object):
         if self._stellar_dex is not None:
             return self._stellar_dex
         if self._bulk_planet is not None:
-            return self._calculate_dex_from_bulk()
+            self._stellar_dex = self._calculate_dex_from_bulk()
+            return self._stellar_dex
         if self._bulk_silicate_planet is not None and self._alphas is not None:
             self._bulk_planet = self._calculate_bulk_from_silicate()
-            return self._calculate_dex_from_bulk()
+            return self._bulk_planet
         w.warn("stellar_dex is not set and cannot be computed. "
                "Pass stellar_dex, bulk_planet, or "
                "(bulk_silicate_planet + alphas).",
@@ -172,10 +176,11 @@ class Planet(object):
         if self._alphas is not None:
             return self._alphas
         if self._bulk_planet is not None and self._bulk_silicate_planet is not None:
-            return self._calculate_alphas_from_bulk_and_silicate()
+            self._alphas = self._calculate_alphas_from_bulk_and_silicate()
+            return self._alphas
         if self.stellar_dex is not None and self._bulk_silicate_planet is not None:
             self._stellar_dex = self._calculate_dex_from_bulk()
-            return self._calculate_alphas_from_bulk_and_silicate()
+            return self._stellar_dex
         # Explain what's missing
         missing = []
         if self._bulk_planet is None:
