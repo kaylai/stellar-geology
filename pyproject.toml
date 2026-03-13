@@ -9,6 +9,11 @@ description = "A python library for calculating planet geochemistry from stellar
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas",
+]
+
 authors = [
     { name = "Kayla Iacovino", email = "kaylaiacovino@gmail.com" },
 ]
