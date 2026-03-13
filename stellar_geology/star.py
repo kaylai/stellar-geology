@@ -1,3 +1,7 @@
+"""The Star module defines the :class:`Star` class for representing stellar
+compositions and converting them through the dex-to-oxide pipeline.
+"""
+
 from . import conversions as conv
 from . import constants as const
 import warnings as w
@@ -45,29 +49,34 @@ class Star(object):
     
     @property
     def stellar_dex(self):
+        """dict or None : Stellar composition in dex notation."""
         if self._stellar_dex is not None:
             return self._stellar_dex
-    
+
     @property
     def name(self):
+        """str or None : Star name."""
         if self._name is not None:
             return self._name
-    
+
     @property
     def mass(self):
+        """float or None : Star mass (not yet implemented)."""
         if self._mass is not None:
             return self._mass
-    
+
     @property
     def ax(self):
+        """dict or None : Elemental ratio relative to solar (10^dex)."""
         if self._ax is not None:
             return self._ax
         if self._stellar_dex is not None:
             self._ax = conv.calculate_ax_from_dex(self._stellar_dex)
-            return self._ax 
-    
+            return self._ax
+
     @property
     def atomsRefSolar(self):
+        """dict or None : Number of atoms referenced to solar abundances."""
         if self._atomsRefSolar is not None:
             return self._atomsRefSolar
         if self._ax is not None:
@@ -75,9 +84,10 @@ class Star(object):
         if self._stellar_dex is not None:
             self._ax = conv.calculate_ax_from_dex(self._stellar_dex)
             return conv.calculate_atomsRefSolar_from_ax(self._ax)
-    
+
     @property
     def totalWtAtoms(self):
+        """dict or None : Total weight of atoms (element wt scaled by atomic mass)."""
         if self._totalWtAtoms is not None:
             return self._totalWtAtoms
         if self._atomsRefSolar is not None:
@@ -92,6 +102,7 @@ class Star(object):
     
     @property
     def wtptElements(self):
+        """dict or None : Composition as wt% elements (includes volatiles C, O, S)."""
         if self._wtptElements is not None:
             return self._wtptElements
         if self._totalWtAtoms is not None:
@@ -111,6 +122,7 @@ class Star(object):
     
     @property
     def wtptOxides(self):
+        """dict or None : Composition as wt% oxides (volatile-free)."""
         if self._wtptOxides is not None:
             return self._wtptOxides
         if self._wtptElements is not None:

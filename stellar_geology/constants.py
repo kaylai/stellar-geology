@@ -1,3 +1,9 @@
+"""Geochemical constants used throughout stellar_geology.
+
+Includes atomic and oxide molar masses, solar abundance references,
+and mapping dictionaries between oxide and element representations.
+"""
+
 __all__ = ['oxides_to_elements', 'elements_to_oxides']
 
 cationMass = {

@@ -1,0 +1,65 @@
+/* ==========================================================================
+   stellar_geology docs — custom styles
+   ========================================================================== */
+
+/* --- Tables: word-wrap in parameter docs --- */
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal !important;
+    word-wrap: break-word;
+}
+
+/* --- Function/method signatures: prevent overflow --- */
+dl.py dt {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-all;
+}
+
+/* --- Force all class/method/property definitions to single-column layout ---
+   RTD packs short properties side-by-side; this forces full-width stacking. */
+dl.py {
+    display: block !important;
+    columns: unset !important;
+}
+
+dl.py dt,
+dl.py dd {
+    display: block !important;
+    width: 100% !important;
+    float: none !important;
+}
+
+/* --- Consistent spacing between API entries --- */
+dl.py > dt {
+    margin-top: 1.5em;
+    padding: 6px 10px;
+}
+
+/* First entry doesn't need extra top margin */
+dl.py > dt:first-child {
+    margin-top: 0;
+}
+
+dl.py > dd {
+    margin-bottom: 1em;
+}
+
+/* --- Property blocks: cleaner presentation --- */
+dl.py .property {
+    font-style: italic;
+    color: #666;
+}
+
+/* --- Visual separation between major API sections (classes, functions) --- */
+section > dl.py {
+    margin-bottom: 2em;
+}
+
+/* --- Brand color overrides — deep space indigo --- */
+.wy-side-nav-search {
+    background-color: #1a1147;
+}
+.wy-nav-top {
+    background-color: #1a1147;
+}

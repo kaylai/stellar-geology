@@ -17,6 +17,12 @@ venv/
 # Claude Code
 .claude/
 
+# Docs
+docs/_build/
+docs/auto_examples/
+docs/sg_execution_times.rst
+.readthedocs.yaml
+
 # OS
 .DS_Store
 Thumbs.db

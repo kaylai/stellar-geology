@@ -18,7 +18,6 @@ __all__ = [
     'Planet',
     # 'Mineralogy', # to be implemented!
     # Functions
-    'createPlanet',
     'calculate_mineralogy',
     'calculate_composition_from_mineralogy',
     'plot_norm',

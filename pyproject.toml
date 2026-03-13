@@ -18,6 +18,17 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "sphinx-copybutton",
+    "sphinx-autodoc-typehints",
+    "sphinx-gallery",
+    "myst-parser",
+    "matplotlib",
+]
+
 [project.urls]
 Homepage = "https://github.com/kaylai/stellar-geology"
 Repository = "https://github.com/kaylai/stellar-geology"

@@ -1,3 +1,8 @@
+"""The Planet module defines the :class:`Planet` class for representing
+planetary bulk and silicate compositions derived from stellar data or
+direct geochemical inputs.
+"""
+
 from . import star
 from . import conversions as conv
 from . import constants as const
@@ -91,6 +96,11 @@ class Planet(object):
         
     @property
     def bulk_planet(self):
+        """dict or None : Bulk planet composition in wt% oxides.
+
+        Auto-calculated from ``stellar_dex`` or
+        ``bulk_silicate_planet`` + ``alphas`` if not provided directly.
+        """
         if self._bulk_planet is not None:
             return self._bulk_planet
         if self._stellar_dex is not None:
@@ -112,6 +122,11 @@ class Planet(object):
 
     @property
     def bulk_silicate_planet(self):
+        """dict or None : Bulk silicate planet composition in wt% oxides.
+
+        Auto-calculated from ``bulk_planet`` + ``alphas`` if not provided
+        directly.
+        """
         if self._bulk_silicate_planet is not None:
             return self._bulk_silicate_planet
         if self._bulk_planet is not None and self._alphas is not None:
@@ -130,6 +145,10 @@ class Planet(object):
 
     @property
     def stellar_dex(self):
+        """dict or None : Stellar composition in dex notation.
+
+        Auto-calculated from ``bulk_planet`` if not provided directly.
+        """
         if self._stellar_dex is not None:
             return self._stellar_dex
         if self._bulk_planet is not None:
@@ -145,6 +164,11 @@ class Planet(object):
 
     @property
     def alphas(self):
+        """dict or None : Element partitioning ratios (BSP/BP) for core formation.
+
+        Auto-calculated from ``bulk_planet`` + ``bulk_silicate_planet`` if
+        not provided directly.
+        """
         if self._alphas is not None:
             return self._alphas
         if self._bulk_planet is not None and self._bulk_silicate_planet is not None:
@@ -166,14 +190,28 @@ class Planet(object):
     
     @property
     def name(self):
+        """str or None : Planet name."""
         return self._name
-    
+
     @property
     def mass(self):
+        """float or None : Planet mass (not yet implemented)."""
         return self._mass
-    
+
     @classmethod
     def from_star(cls, star):
+        """Create a Planet from a :class:`~stellar_geology.star.Star` object.
+
+        Parameters
+        ----------
+        star : :class:`~stellar_geology.star.Star`
+            A Star instance with a ``stellar_dex`` composition.
+
+        Returns
+        -------
+        Planet
+            A new Planet initialized with the star's dex composition.
+        """
         return cls(stellar_dex=star.stellar_dex)
 
     def get_composition(self, which, units='wtpt_oxides', normalization=None):

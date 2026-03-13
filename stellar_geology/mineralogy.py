@@ -1,3 +1,11 @@
+"""CIPW normative mineralogy calculations.
+
+Provides functions to compute normative mineral assemblages (olivine,
+clinopyroxene, orthopyroxene, garnet) from silicate compositions using the
+Thompson (1982) reaction-space approach as implemented in Putirka and
+Rarick (2019).
+"""
+
 import numpy as np
 import pandas as pd
 
