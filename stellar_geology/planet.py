@@ -3,7 +3,6 @@ planetary bulk and silicate compositions derived from stellar data or
 direct geochemical inputs.
 """
 
-from . import star
 from . import conversions as conv
 from . import constants as const
 import warnings as w
@@ -106,10 +105,7 @@ class Planet(object):
         if self._stellar_dex is not None:
             self._bulk_planet = conv.calculate_bulk_planet_from_dex(self._stellar_dex)
             return self._bulk_planet
-        if self._bulk_silicate_planet is not None and self.alphas is not None:
-            self._bulk_planet = conv.calculate_bulk_from_silicate(self._bulk_silicate_planet,
-                                                     self.alphas)
-            return self._bulk_planet
+        # TODO: reverse calculation (BSP + alphas → bulk_planet) not yet implemented
         # Explain what's missing
         if self._bulk_silicate_planet is not None and self._alphas is None:
             w.warn("bulk_planet cannot be computed: "
@@ -120,6 +116,9 @@ class Planet(object):
                    "Pass bulk_planet, stellar_dex, or "
                    "(bulk_silicate_planet + alphas).",
                    category=UserWarning)
+        else:
+            w.warn("Could not calculate bulk_planet composition. Check that your inputs have correct"
+               " values.")
         return None
 
     @property
@@ -140,7 +139,7 @@ class Planet(object):
             w.warn("bulk_silicate_planet cannot be computed: "
                    "bulk_planet was provided but alphas is missing.",
                    category=UserWarning)
-        elif self._bulk_planet is None:
+        else:
             w.warn("bulk_silicate_planet is not set and cannot be computed. "
                    "Pass bulk_silicate_planet, or (bulk_planet + alphas).",
                    category=UserWarning)
@@ -154,12 +153,8 @@ class Planet(object):
         """
         if self._stellar_dex is not None:
             return self._stellar_dex
-        if self._bulk_planet is not None:
-            self._stellar_dex = self._calculate_dex_from_bulk()
-            return self._stellar_dex
-        if self._bulk_silicate_planet is not None and self._alphas is not None:
-            self._bulk_planet = self._calculate_bulk_from_silicate()
-            return self._bulk_planet
+        # TODO: reverse calculation (bulk_planet → dex) not yet implemented
+        # TODO: reverse calculation (BSP + alphas → bulk_planet → dex) not yet implemented
         w.warn("stellar_dex is not set and cannot be computed. "
                "Pass stellar_dex, bulk_planet, or "
                "(bulk_silicate_planet + alphas).",
@@ -175,12 +170,9 @@ class Planet(object):
         """
         if self._alphas is not None:
             return self._alphas
-        if self._bulk_planet is not None and self._bulk_silicate_planet is not None:
-            self._alphas = self._calculate_alphas_from_bulk_and_silicate()
-            return self._alphas
-        if self.stellar_dex is not None and self._bulk_silicate_planet is not None:
-            self._stellar_dex = self._calculate_dex_from_bulk()
-            return self._stellar_dex
+        # TODO: reverse calculation (bulk_planet + BSP → alphas) not yet implemented
+        # Cannot auto-compute alphas from stellar_dex + BSP alone;
+        # would need both bulk_planet and bulk_silicate_planet.
         # Explain what's missing
         missing = []
         if self._bulk_planet is None:
@@ -204,7 +196,7 @@ class Planet(object):
         return self._mass
 
     @classmethod
-    def from_star(cls, star):
+    def from_star(cls, star, **kwargs):
         """Create a Planet from a :class:`~stellar_geology.star.Star` object.
 
         Parameters
@@ -217,7 +209,7 @@ class Planet(object):
         Planet
             A new Planet initialized with the star's dex composition.
         """
-        return cls(stellar_dex=star.stellar_dex)
+        return cls(stellar_dex=star.stellar_dex, **kwargs)
 
     def get_composition(self, which, units='wtpt_oxides', normalization=None):
         """
