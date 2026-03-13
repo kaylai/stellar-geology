@@ -5,3 +5,5 @@ sphinx-autodoc-typehints
 sphinx-gallery
 myst-parser
 matplotlib
+pandas
+numpy
