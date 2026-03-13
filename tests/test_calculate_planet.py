@@ -74,7 +74,7 @@ def test_create_planet_from_Star():
 def test_silicate_from_bulk():
     # known bulk silicate  composition of C #5 Ringwood from the Hypatia catalog
     # (Hinkel et al. 2014) as reported in Putirka and Rarick (2019)
-    C5Ringwood_wtptOxides = {
+    c5_ringwood_wtpt_oxides = {
             'SiO2'  : 34.3228620623356,
             'TiO2'  : 0.1289398301558,
             'Al2O3' : 2.6516473296260,
@@ -98,7 +98,7 @@ def test_silicate_from_bulk():
         'Cr2O3' : 0.5905624970884,
         'NiO'   : 0.1391186501890,
     }
-    p = Planet(bulk_planet=C5Ringwood_wtptOxides, alphas=alphas)
+    p = Planet(bulk_planet=c5_ringwood_wtpt_oxides, alphas=alphas)
     # rel=1e-4 accounts for small differences in molecular weight constants
     # between our code and the Putirka & Rarick (2019) spreadsheet
     assert p.bulk_silicate_planet == pytest.approx(expected_silicate_planet, rel=1e-4)

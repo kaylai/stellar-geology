@@ -6,10 +6,10 @@ def test_empty_star_returns_none():
     s = Star()
     assert s.stellar_dex is None
     assert s.ax is None
-    assert s.atomsRefSolar is None
-    assert s.totalWtAtoms is None
-    assert s.wtptElements is None
-    assert s.wtptOxides is None
+    assert s.atoms_ref_solar is None
+    assert s.total_wt_atoms is None
+    assert s.wtpt_elements is None
+    assert s.wtpt_oxides is None
     assert s.name is None
     assert s.mass is None
 

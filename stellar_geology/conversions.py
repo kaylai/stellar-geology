@@ -4,6 +4,22 @@ Chemistry conversion functions imported by planet and star
 
 from . import constants as const
 
+__all__ = [
+    'VALID_UNITS',
+    'calculate_bulk_planet_from_dex',
+    'convert_composition',
+    'convert_to_wtpt_oxides',
+    'normalize_composition',
+    # Legacy public functions (used in reverse conversions)
+    'wtpt_oxides_to_mol_oxides',
+    'wtpt_oxides_to_mol_cations',
+    'wtpt_oxides_to_mol_singleO',
+    'mol_oxides_to_wtpt_oxides',
+    'mol_cations_to_wtpt_oxides',
+    'mol_oxides_to_mol_cations',
+    'mol_cations_to_mol_oxides',
+]
+
 def calculate_bulk_planet_from_dex(stellar_dex: dict[str, float]) -> dict[str, float]:
     """
     Runs all intermediate calculations to go directly from star composition in
@@ -22,75 +38,130 @@ def calculate_bulk_planet_from_dex(stellar_dex: dict[str, float]) -> dict[str, f
         Bulk planet composition in wt% oxides.
     """
     ax = calculate_ax_from_dex(stellar_dex)
-    atomsRefSolar = calculate_atomsRefSolar_from_ax(ax)
-    totalWtAtoms = calculate_totalWtAtoms_from_atomsRefSolar(atomsRefSolar)
-    wtptElements = calcualte_wtptElements_from_totalWtAtoms(totalWtAtoms)
-    wtptOxides = calculate_wtptOxides_from_wtptElements(wtptElements)
-    
-    return wtptOxides
+    atoms_ref_solar = calculate_atoms_ref_solar_from_ax(ax)
+    total_wt_atoms = calculate_total_wt_atoms_from_atoms_ref_solar(atoms_ref_solar)
+    wtpt_elements = calculate_wtpt_elements_from_total_wt_atoms(total_wt_atoms)
+    wtpt_oxides = calculate_wtpt_oxides_from_wtpt_elements(wtpt_elements)
+
+    return wtpt_oxides
 
 #--- INTERMEDIATE CALCULATIONS BETWEEN DEX NOTATION AND BULK PLANET OXIDES ---#
 def calculate_ax_from_dex(stellar_dex: dict[str, float]) -> dict[str, float]:
     """
     Convert from dex system notation to elemental ratio relative to solar
 
-    Args:
-        composition (dict[str, float])
+    Parameters
+    ----------
+    stellar_dex : dict[str, float]
+        Stellar composition in dex notation.
+
+    Returns
+    -------
+    dict[str, float]
+        Elemental ratios relative to solar (10^dex).
     """
     ax = {}
     dex_elems = list(stellar_dex.keys())
-    
+
     for el in dex_elems:
         if stellar_dex[el] != 0:
             ax[el] = 10**stellar_dex[el]
         else:
             ax[el] = 0
-    
+
     return ax
-    
-def calculate_atomsRefSolar_from_ax(ax: dict[str, float]) -> dict[str, float]:
-    atomsRefSolar = {}
+
+def calculate_atoms_ref_solar_from_ax(ax: dict[str, float]) -> dict[str, float]:
+    """Convert elemental ratios to atom counts referenced to solar abundances.
+
+    Parameters
+    ----------
+    ax : dict[str, float]
+        Elemental ratios relative to solar.
+
+    Returns
+    -------
+    dict[str, float]
+        Atom counts referenced to solar abundances.
+    """
+    atoms_ref_solar = {}
     ax_elems = list(ax.keys())
-    
+
     for el in ax_elems:
-        atomsRefSolar[el] = ax[el] * 10**const.A_El[el]
-    
-    return atomsRefSolar
-    
-def calculate_totalWtAtoms_from_atomsRefSolar(atomsRefSolar: dict[str, float]) -> dict[str, float]:
-    totalWtAtoms = {}
-    atomsRefSolar_elems = list(atomsRefSolar.keys())
-    
-    for el in atomsRefSolar_elems:
-        totalWtAtoms[el] = atomsRefSolar[el] * const.cationMass[el]
-    
-    return totalWtAtoms
+        atoms_ref_solar[el] = ax[el] * 10**const.A_El[el]
 
-def calcualte_wtptElements_from_totalWtAtoms(totalWtAtoms: dict[str, float]) -> dict[str, float]:
-    totalWtAtoms_sum = sum(totalWtAtoms.values())
-    wtptElements = {}
-    totalWtAtoms_elems = list(totalWtAtoms.keys())
-    
-    for el in totalWtAtoms_elems:
-        wtptElements[el] = 100 * totalWtAtoms[el]/totalWtAtoms_sum
-    
-    return wtptElements
+    return atoms_ref_solar
 
-def calculate_wtptOxides_from_wtptElements(wtptElements: dict[str, float]) -> dict[str, float]:
-    wtptOxides = {}
+def calculate_total_wt_atoms_from_atoms_ref_solar(atoms_ref_solar: dict[str, float]) -> dict[str, float]:
+    """Convert solar-referenced atom counts to total weight of atoms.
+
+    Parameters
+    ----------
+    atoms_ref_solar : dict[str, float]
+        Atom counts referenced to solar abundances.
+
+    Returns
+    -------
+    dict[str, float]
+        Total weight of atoms (element count * atomic mass).
+    """
+    total_wt_atoms = {}
+    atoms_ref_solar_elems = list(atoms_ref_solar.keys())
+
+    for el in atoms_ref_solar_elems:
+        total_wt_atoms[el] = atoms_ref_solar[el] * const.cationMass[el]
+
+    return total_wt_atoms
+
+def calculate_wtpt_elements_from_total_wt_atoms(total_wt_atoms: dict[str, float]) -> dict[str, float]:
+    """Convert total weight of atoms to wt% elements.
+
+    Parameters
+    ----------
+    total_wt_atoms : dict[str, float]
+        Total weight of atoms.
+
+    Returns
+    -------
+    dict[str, float]
+        Composition in wt% elements, normalized to sum to 100.
+    """
+    total_wt_atoms_sum = sum(total_wt_atoms.values())
+    wtpt_elements = {}
+    total_wt_atoms_elems = list(total_wt_atoms.keys())
+
+    for el in total_wt_atoms_elems:
+        wtpt_elements[el] = 100 * total_wt_atoms[el]/total_wt_atoms_sum
+
+    return wtpt_elements
+
+def calculate_wtpt_oxides_from_wtpt_elements(wtpt_elements: dict[str, float]) -> dict[str, float]:
+    """Convert wt% elements to wt% oxides (volatile-free, normalized to 100).
+
+    Parameters
+    ----------
+    wtpt_elements : dict[str, float]
+        Composition in wt% elements.
+
+    Returns
+    -------
+    dict[str, float]
+        Composition in wt% oxides, normalized to sum to 100.
+    """
+    wtpt_oxides = {}
     volatile_free_elems = list(const.elements_to_oxides.keys())
-    
+
     for el in volatile_free_elems:
-        if el not in wtptElements:
+        if el not in wtpt_elements:
             continue
         ox = const.elements_to_oxides[el]
         conversion_factor = const.oxideMass[ox]/(const.cationMass[el]*const.CationNum[ox])
-        wtptOxides[ox] = wtptElements[el]*conversion_factor
-    
-    wtptOxides_sum = sum(wtptOxides.values())
-    wtptOxides = {k: 100*v/wtptOxides_sum for k, v in wtptOxides.items()}
+        wtpt_oxides[ox] = wtpt_elements[el]*conversion_factor
 
-    return wtptOxides
+    wtpt_oxides_sum = sum(wtpt_oxides.values())
+    wtpt_oxides = {k: 100*v/wtpt_oxides_sum for k, v in wtpt_oxides.items()}
+
+    return wtpt_oxides
 
 
 #--- COMPOSABLE UNIT CONVERSION SYSTEM ---#

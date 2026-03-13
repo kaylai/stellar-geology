@@ -240,13 +240,13 @@ def test_star_get_composition_wtpt_oxides():
     """get_composition(units='wtpt_oxides') should match the wtptOxides property."""
     s = Star(stellar_dex=star_32768_dex)
     comp = s.get_composition(units='wtpt_oxides')
-    assert comp == pytest.approx(s.wtptOxides)
+    assert comp == pytest.approx(s.wtpt_oxides)
 
 def test_star_get_composition_wtpt_elements():
-    """get_composition(units='wtpt_elements') should match the wtptElements property."""
+    """get_composition(units='wtpt_elements') should match the wtpt_elements property."""
     s = Star(stellar_dex=star_32768_dex)
     comp = s.get_composition(units='wtpt_elements')
-    assert comp == pytest.approx(s.wtptElements)
+    assert comp == pytest.approx(s.wtpt_elements)
 
 def test_star_get_composition_wtfrac_oxides_sums_to_one():
     s = Star(stellar_dex=star_32768_dex)

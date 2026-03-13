@@ -14,6 +14,8 @@ import warnings as w
 if TYPE_CHECKING:
     from .star import Star
 
+__all__ = ['Planet']
+
 
 class Planet(object):
     def __init__(self, bulk_planet: dict[str, float] | None = None,
@@ -27,7 +29,6 @@ class Planet(object):
 
         Parameters
         ----------
-        None required. Would return an empty Planet() object with no attributes.
         Caution: do not pass multiple conflicting compositional parameters or
         it will raise an Error. Just pass one, and the others will be auto-
         matically computed for you. Like magic.
