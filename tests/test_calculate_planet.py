@@ -106,3 +106,93 @@ def test_silicate_from_bulk():
 def test_mantle_CIPW_norm():
     # TODO test for calculating CIPW norm from mantle (bulk_silicate_planet) composition.
     pass
+
+
+# ============================================================================
+# REVERSE PIPELINE: BSP + alphas → bulk_planet
+# ============================================================================
+def test_bulk_planet_from_bsp_and_alphas():
+    """BSP + alphas should recover bulk_planet via the reverse calculation."""
+    c5_ringwood_wtpt_oxides = {
+        'SiO2'  : 34.3228620623356,
+        'TiO2'  : 0.1289398301558,
+        'Al2O3' : 2.6516473296260,
+        'FeO'   : 33.7355431278904,
+        'MgO'   : 23.9923487223086,
+        'CaO'   : 2.0517814044420,
+        'Na2O'  : 0.7781373566196,
+        'Cr2O3' : 0.4498165616991,
+        'NiO'   : 1.8889236049229,
+    }
+    alphas = {"Fe": 0.494, "Ni": 0.08, "Si": 0.98}
+
+    # Forward: bulk → BSP
+    p_fwd = Planet(bulk_planet=c5_ringwood_wtpt_oxides, alphas=alphas)
+    bsp = p_fwd.bulk_silicate_planet
+
+    # Reverse: BSP + alphas → bulk
+    p_rev = Planet(bulk_silicate_planet=bsp, alphas=alphas)
+    recovered_bulk = p_rev.bulk_planet
+
+    assert recovered_bulk == pytest.approx(c5_ringwood_wtpt_oxides, rel=1e-4)
+
+
+def test_stellar_dex_from_bulk_planet():
+    """Planet initialized with bulk_planet should compute stellar_dex in reverse."""
+    star_32768_dex = {
+        'Si': 0.27,
+        'Ti': 4.61436e-16,
+        'Cr': 0.08,
+        'Al': 0.23,
+        'Fe': 0.02,
+        'Mn': 0.06,
+        'Mg': 0.21,
+        'Ca': 0.1,
+        'Na': 0.3,
+        'Ni': 0.04,
+        'C':  -0.14,
+        'O':  -0.06,
+    }
+    p = Planet(stellar_dex=star_32768_dex)
+    bulk = p.bulk_planet
+
+    # New planet from bulk, should compute dex in reverse
+    p2 = Planet(bulk_planet=bulk)
+    recovered_dex = p2.stellar_dex
+
+    # Relative dex differences should be preserved
+    common = [el for el in star_32768_dex
+              if el in recovered_dex and el not in ('C', 'O', 'S')]
+    ref = 'Fe'
+    for el in common:
+        if el == ref:
+            continue
+        original_diff = star_32768_dex[el] - star_32768_dex[ref]
+        recovered_diff = recovered_dex[el] - recovered_dex[ref]
+        assert recovered_diff == pytest.approx(original_diff, abs=1e-6)
+
+
+def test_alphas_from_bulk_and_bsp():
+    """Planet with both bulk and BSP should compute alphas."""
+    c5_ringwood = {
+        'SiO2'  : 34.3228620623356,
+        'TiO2'  : 0.1289398301558,
+        'Al2O3' : 2.6516473296260,
+        'FeO'   : 33.7355431278904,
+        'MgO'   : 23.9923487223086,
+        'CaO'   : 2.0517814044420,
+        'Na2O'  : 0.7781373566196,
+        'Cr2O3' : 0.4498165616991,
+        'NiO'   : 1.8889236049229,
+    }
+    alphas_orig = {"Fe": 0.494, "Ni": 0.08, "Si": 0.98}
+
+    p_fwd = Planet(bulk_planet=c5_ringwood, alphas=alphas_orig)
+    bsp = p_fwd.bulk_silicate_planet
+
+    # Create planet with both bulk and BSP, no alphas
+    p_rev = Planet(bulk_planet=c5_ringwood, bulk_silicate_planet=bsp)
+    computed_alphas = p_rev.alphas
+
+    assert computed_alphas["Fe"] == pytest.approx(alphas_orig["Fe"], rel=1e-4)
+    assert computed_alphas["Ni"] == pytest.approx(alphas_orig["Ni"], rel=1e-4)

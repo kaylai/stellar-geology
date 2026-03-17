@@ -72,7 +72,7 @@ def calculate_mineralogy(silicate_composition: dict[str, float], units: str = 'w
     
 def _calculate_mol_prop_ox_cipw(silicate_composition: dict[str, float]) -> dict[str, float]:
     xtal_oxides = ["SiO2", "Al2O3", "FeO", "MgO", "CaO"]
-    mol_prop_ox_cipw = {ox: (silicate_composition[ox] * const.CationNum[ox]) /
+    mol_prop_ox_cipw = {ox: (silicate_composition.get(ox, 0.0) * const.CationNum[ox]) /
                         const.oxideMass[ox] for ox in xtal_oxides}
     return mol_prop_ox_cipw
 

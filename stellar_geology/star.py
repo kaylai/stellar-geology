@@ -10,14 +10,23 @@ __all__ = ['Star']
 
 
 class Star(object):
-    # TODO: add `units` param to __init__ so users can pass compositions in
-    # any supported unit, not just dex. Internally convert to dex on init.
-    def __init__(self, stellar_dex: dict[str, float] | None = None, name: str | None = None, mass: float | None = None) -> None:
+    def __init__(self, stellar_dex: dict[str, float] | None = None,
+                 wtpt_oxides: dict[str, float] | None = None,
+                 name: str | None = None,
+                 mass: float | None = None) -> None:
         """
         Parameters
         ----------
         stellar_dex : dict[str, float], optional
             Stellar composition in dex notation, as elements.
+        wtpt_oxides : dict[str, float], optional
+            Stellar composition as wt% oxides. When provided instead of
+            stellar_dex, the pipeline runs in reverse to recover dex values.
+            Note that volatile elements (C, O, S) cannot be recovered from
+            oxide data, and the recovered dex values are shifted by a constant
+            offset relative to the true stellar dex (see CAVEATS.md). The
+            interelemental dex ratios are exact. Only one of stellar_dex or
+            wtpt_oxides may be provided.
         name : str, optional
             Arbitrary name for your star as a string. Can be anything. Either
             aa, either bb, even zombocom. At zombocom you can do anything.
@@ -26,12 +35,17 @@ class Star(object):
             implemented yet. So, put whatever float you want here. It won't
             make any difference.
         """
-        self._stellar_dex = stellar_dex
+        if stellar_dex is not None and wtpt_oxides is not None:
+            raise ValueError("Cannot pass both stellar_dex and wtpt_oxides. "
+                             "Pick one compositional input and the other will "
+                             "be computed for you. Like magic.")
+
         self._name = name
         self._mass = mass
 
         # calculated attributes
         # typically not needed by user, used for benchmarking and debugging
+        self._stellar_dex: dict[str, float] | None = None
         self._ax: dict[str, float] | None = None
         self._atoms_ref_solar: dict[str, float] | None = None
         self._total_wt_atoms: dict[str, float] | None = None
@@ -39,18 +53,40 @@ class Star(object):
         self._wtpt_oxides: dict[str, float] | None = None
 
         if stellar_dex is not None:
-            unrecognized_keys = []
-            for k in stellar_dex.keys():
-                if k not in const.elements_to_oxides.keys() and k not in const.oxides_to_elements.keys():
-                    unrecognized_keys.append(k)
+            unrecognized_keys = [k for k in stellar_dex.keys()
+                                 if k not in const.elements_to_oxides.keys()
+                                 and k not in const.oxides_to_elements.keys()]
             if len(unrecognized_keys) > 0:
                 w.warn(f"{unrecognized_keys} were not recognized as compositional parameters and "
                        "will be ignored in calculations.", category=UserWarning)
+            self._stellar_dex = {k: v for k, v in stellar_dex.items()
+                                 if k not in unrecognized_keys}
+
+        if wtpt_oxides is not None:
+            unrecognized_keys = [k for k in wtpt_oxides.keys()
+                                 if k not in const.oxides_to_elements.keys()]
+            if len(unrecognized_keys) > 0:
+                w.warn(f"{unrecognized_keys} were not recognized as oxide parameters and "
+                       "will be ignored in calculations.", category=UserWarning)
+            # Filter to recognized oxides only, then eagerly compute reverse chain
+            clean_oxides = {k: v for k, v in wtpt_oxides.items()
+                            if k in const.oxides_to_elements}
+            self._wtpt_oxides = clean_oxides
+            self._wtpt_elements = conv.calculate_wtpt_elements_from_wtpt_oxides(clean_oxides)
+            self._total_wt_atoms = conv.calculate_total_wt_atoms_from_wtpt_elements(self._wtpt_elements)
+            self._atoms_ref_solar = conv.calculate_atoms_ref_solar_from_total_wt_atoms(self._total_wt_atoms)
+            self._ax = conv.calculate_ax_from_atoms_ref_solar(self._atoms_ref_solar)
+            self._stellar_dex = conv.calculate_dex_from_ax(self._ax)
 
 
     @property
     def stellar_dex(self) -> dict[str, float] | None:
-        """dict[str, float] or None : Stellar composition in dex notation."""
+        """dict[str, float] or None : Stellar composition in dex notation.
+
+        Auto-computed in reverse from wtpt_oxides if not provided directly.
+        See CAVEATS.md for the constant-offset ambiguity in recovered dex
+        values.
+        """
         return self._stellar_dex
 
     @property
@@ -86,7 +122,13 @@ class Star(object):
 
     @property
     def wtpt_elements(self) -> dict[str, float] | None:
-        """dict[str, float] or None : Composition as wt% elements (includes volatiles C, O, S)."""
+        """dict[str, float] or None : Composition as wt% elements.
+
+        When computed forward from stellar_dex, includes volatile elements
+        (C, O, S). When computed in reverse from wtpt_oxides, only
+        rock-forming elements are present — volatiles are irrecoverable
+        from oxide data.
+        """
         if self._wtpt_elements is None and self.total_wt_atoms is not None:
             self._wtpt_elements = conv.calculate_wtpt_elements_from_total_wt_atoms(self.total_wt_atoms)
         return self._wtpt_elements
@@ -116,16 +158,18 @@ class Star(object):
         Returns
         -------
         dict[str, float] or None
-            Composition in the requested units, or None if no stellar_dex is set.
+            Composition in the requested units, or None if no compositional
+            data is set.
 
         Notes
         -----
         Star element outputs (wtpt_elements, wtfrac_elements) include volatile
-        elements (C, O, S) from the stellar pipeline. These are not available
-        in oxide-based conversions.
+        elements (C, O, S) from the stellar pipeline when initialized from
+        stellar_dex. When initialized from wtpt_oxides, volatile elements are
+        not available — only rock-forming elements are returned.
         """
-        if self._stellar_dex is None:
-            w.warn("Cannot compute composition: no stellar_dex is set.",
+        if self._stellar_dex is None and self._wtpt_oxides is None:
+            w.warn("Cannot compute composition: no stellar_dex or wtpt_oxides is set.",
                    category=UserWarning)
             return None
 
@@ -137,7 +181,7 @@ class Star(object):
         if units in ('wtpt_elements', 'wtfrac_elements'):
             wt_elements = self.wtpt_elements
             if wt_elements is None:
-                w.warn("Cannot compute element composition from stellar_dex.",
+                w.warn("Cannot compute element composition.",
                        category=UserWarning)
                 return None
             if units == 'wtpt_elements':
@@ -147,7 +191,7 @@ class Star(object):
         else:
             wt_oxides = self.wtpt_oxides
             if wt_oxides is None:
-                w.warn("Cannot compute oxide composition from stellar_dex.",
+                w.warn("Cannot compute oxide composition.",
                        category=UserWarning)
                 return None
             result = conv.convert_composition(wt_oxides, units)
