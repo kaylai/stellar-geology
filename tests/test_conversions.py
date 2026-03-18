@@ -3,6 +3,27 @@ from stellar_geology import conversions as conv
 
 # TODO !!
 
+def test_calculate_molar_mgnum():
+    """wt% oxides to molar Mg# = Mg/(Mg+Fe)"""
+    SILICATE_WTPT_OXIDES = {
+        'SiO2':  50.68,
+        'TiO2':  0.15,
+        'Al2O3': 12.27,
+        'FeO':   6.49,
+        'MnO':   0.12,
+        'MgO':   15.03,
+        'CaO':   13.65,
+        'Na2O':  0.62,
+        'K2O' :  0.17,
+        'P2O5':  0.0,
+        'Cr2O3': 1.06,
+        'NiO':   0.0,
+    }
+    
+    EXPECTED_MG_NUM = 0.804975434
+    assert conv.calculate_mg_number(SILICATE_WTPT_OXIDES) == (
+        pytest.approx(EXPECTED_MG_NUM, rel=1e-4))
+
 # ============================================================================
 # REVERSE PIPELINE TESTS
 # ============================================================================

@@ -790,3 +790,24 @@ def normalize_composition(composition: dict[str, float], normalization: str, uni
 
     # Should be unreachable — all valid normalizations are handled above
     raise ValueError(f"Unhandled normalization: '{normalization}'")
+
+
+def calculate_mg_number(composition: dict[str, float], units="wtpt_oxides") -> float:
+    """
+    Takes in wt% oxides, calculates molar Mg# = MgO/(MgO+FeO)
+    
+    Parameters
+    ----------
+    composition: dict[str, float]
+        Silicate composition. Only wtpt_oxides is currently supported.
+    
+    units: str
+        Units of input composition. Only wtpt_oxides is currently supported.
+    """
+    if units != "wtpt_oxides":
+        raise ValueError("Only wtpt_oxides is currently implemented for units of input composition.")
+    
+    MgO_molar = composition['MgO'] / const.oxideMass['MgO']
+    FeO_molar = composition['FeO'] / const.oxideMass['FeO']
+    
+    return MgO_molar/(MgO_molar + FeO_molar)
