@@ -53,24 +53,12 @@ class Star(object):
         self._wtpt_oxides: dict[str, float] | None = None
 
         if stellar_dex is not None:
-            unrecognized_keys = [k for k in stellar_dex.keys()
-                                 if k not in const.elements_to_oxides.keys()
-                                 and k not in const.oxides_to_elements.keys()]
-            if len(unrecognized_keys) > 0:
-                w.warn(f"{unrecognized_keys} were not recognized as compositional parameters and "
-                       "will be ignored in calculations.", category=UserWarning)
-            self._stellar_dex = {k: v for k, v in stellar_dex.items()
-                                 if k not in unrecognized_keys}
+            self._stellar_dex = const.filter_compositional_keys(
+                stellar_dex, 'stellar_dex')
 
         if wtpt_oxides is not None:
-            unrecognized_keys = [k for k in wtpt_oxides.keys()
-                                 if k not in const.oxides_to_elements.keys()]
-            if len(unrecognized_keys) > 0:
-                w.warn(f"{unrecognized_keys} were not recognized as oxide parameters and "
-                       "will be ignored in calculations.", category=UserWarning)
-            # Filter to recognized oxides only, then eagerly compute reverse chain
-            clean_oxides = {k: v for k, v in wtpt_oxides.items()
-                            if k in const.oxides_to_elements}
+            clean_oxides = const.filter_compositional_keys(
+                wtpt_oxides, 'wtpt_oxides')
             self._wtpt_oxides = clean_oxides
             self._wtpt_elements = conv.calculate_wtpt_elements_from_wtpt_oxides(clean_oxides)
             self._total_wt_atoms = conv.calculate_total_wt_atoms_from_wtpt_elements(self._wtpt_elements)

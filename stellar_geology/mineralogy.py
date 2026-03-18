@@ -60,7 +60,17 @@ def calculate_mineralogy(silicate_composition: dict[str, float], units: str = 'w
         silicate_composition = conv.convert_to_wtpt_oxides(silicate_composition, units)
     else:
         silicate_composition = conv.normalize_composition(silicate_composition, 'standard', 'wtpt_oxides')
-    
+
+    # Fill missing CIPW oxides with 0 and warn
+    import warnings as w
+    cipw_oxides = ["SiO2", "Al2O3", "FeO", "MgO", "CaO"]
+    missing = [ox for ox in cipw_oxides if ox not in silicate_composition]
+    if missing:
+        w.warn(f"{missing} missing from silicate composition and will be "
+               "set to 0 for mineralogy calculation.", category=UserWarning)
+        for ox in missing:
+            silicate_composition[ox] = 0.0
+
     mol_prop_ox_cipw = _calculate_mol_prop_ox_cipw(silicate_composition)
     mol_frac_cipw = _calculate_mol_frac_cipw(mol_prop_ox_cipw)
     

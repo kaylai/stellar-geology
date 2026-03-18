@@ -199,6 +199,37 @@ def test_invalid_units_raises():
     with pytest.raises(ValueError):
         Planet(bulk_planet={"SiO2": 45.0}, units='invalid_units')
 
+
+# ---------------------------------------------------------------------------
+# Superfluous keys are stripped from compositional dicts
+# ---------------------------------------------------------------------------
+def test_superfluous_keys_stripped_from_bulk_planet():
+    with pytest.warns(UserWarning, match="not recognized"):
+        p = Planet(bulk_planet={"SiO2": 45.0, "MgO": 38.0, "Planet": "Earth"})
+    assert "Planet" not in p.bulk_planet
+    assert p.bulk_planet == {"SiO2": 45.0, "MgO": 38.0}
+
+def test_superfluous_keys_stripped_from_bsp():
+    with pytest.warns(UserWarning, match="not recognized"):
+        p = Planet(bulk_silicate_planet={"SiO2": 50.0, "MgO": 35.0, "Source": "model"})
+    assert "Source" not in p.bulk_silicate_planet
+    assert p.bulk_silicate_planet == {"SiO2": 50.0, "MgO": 35.0}
+
+def test_nan_values_replaced_with_zero_in_bulk_planet():
+    p = Planet(bulk_planet={"SiO2": 45.0, "MgO": 38.0, "TiO2": float('nan')})
+    assert p.bulk_planet["TiO2"] == 0.0
+    assert p.bulk_planet == {"SiO2": 45.0, "MgO": 38.0, "TiO2": 0.0}
+
+def test_nan_values_replaced_with_zero_in_bsp():
+    p = Planet(bulk_silicate_planet={"SiO2": 50.0, "FeO": 8.0, "MgO": 32.0,
+                                     "Al2O3": 3.8, "CaO": 4.4, "NiO": float('nan')})
+    assert p.bulk_silicate_planet["NiO"] == 0.0
+
+def test_superfluous_keys_stripped_from_stellar_dex():
+    with pytest.warns(UserWarning, match="not recognized"):
+        p = Planet(stellar_dex={"Si": 0.27, "Mg": 0.21, "Name": "HD 32768"})
+    assert "Name" not in p.stellar_dex
+
 def test_calculate_silicate_from_bulk_noFe():
     with pytest.raises(ValueError):
         Planet(bulk_planet={"SiO2": 45}, alphas=[]).bulk_silicate_planet

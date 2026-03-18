@@ -26,6 +26,17 @@ def test_unrecognized_units_warns():
     with pytest.warns(UserWarning, match="not recognized"):
         Star(stellar_dex={"Si": 25.0, "Zq": 0.5})
 
+def test_superfluous_keys_stripped_from_stellar_dex():
+    with pytest.warns(UserWarning, match="not recognized"):
+        s = Star(stellar_dex={"Si": 0.27, "Mg": 0.21, "Name": "HD 32768"})
+    assert "Name" not in s.stellar_dex
+    assert s.stellar_dex == {"Si": 0.27, "Mg": 0.21}
+
+def test_nan_values_replaced_with_zero_in_stellar_dex():
+    s = Star(stellar_dex={"Si": 0.27, "Mg": 0.21, "Ti": float('nan')})
+    assert s.stellar_dex["Ti"] == 0.0
+    assert s.stellar_dex == {"Si": 0.27, "Mg": 0.21, "Ti": 0.0}
+
 def test_name_returns_directly():
     s = Star(name="zombocom")
     assert s.name == "zombocom"

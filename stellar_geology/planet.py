@@ -70,6 +70,25 @@ class Planet(object):
         if units not in conv.VALID_UNITS:
             raise ValueError(f"units must be one of {conv.VALID_UNITS}, got '{units}'.")
 
+        if bulk_planet is not None:
+            bulk_planet = const.filter_compositional_keys(bulk_planet, 'bulk_planet')
+        if bulk_silicate_planet is not None:
+            bulk_silicate_planet = const.filter_compositional_keys(
+                bulk_silicate_planet, 'bulk_silicate_planet')
+        if stellar_dex is not None:
+            stellar_dex = const.filter_compositional_keys(stellar_dex, 'stellar_dex')
+
+        if bulk_planet is not None and stellar_dex is not None:
+            raise ValueError("Can not pass both bulk_planet and stellar_dex.")
+        
+        if bulk_planet is not None and bulk_silicate_planet is not None and alphas is not None:
+            raise ValueError("Cannot pass all bulk_planet, bulk_silicate_planet"
+                             ", and alphas as values may be contradictory.")
+        
+        if bulk_silicate_planet is not None and alphas is not None and stellar_dex is not None:
+            raise ValueError("Cannot pass all bulk_silicate_planet, alphas, "
+                             "and stellar_dex, as values may be contradictory.")
+        
         # Convert inputs to canonical wtpt_oxides
         if bulk_planet is not None and units != 'wtpt_oxides':
             bulk_planet = conv.convert_to_wtpt_oxides(bulk_planet, units)
@@ -84,26 +103,6 @@ class Planet(object):
         self._name = name
         self._mass = mass
         
-        if bulk_planet is not None:
-            unrecognized_keys = []
-            for k in bulk_planet.keys():
-                if k not in const.elements_to_oxides.keys() and k not in const.oxides_to_elements.keys():
-                    unrecognized_keys.append(k)
-            if len(unrecognized_keys) > 0:
-                w.warn(f"{unrecognized_keys} were not recognized as compositional parameters and "
-                       "will be ignored in calculations.", category=UserWarning)
-        
-        if bulk_planet is not None and stellar_dex is not None:
-            raise ValueError("Can not pass both bulk_planet and stellar_dex.")
-        
-        if bulk_planet is not None and bulk_silicate_planet is not None and alphas is not None:
-            raise ValueError("Cannot pass all bulk_planet, bulk_silicate_planet"
-                             ", and alphas as values may be contradictory.")
-        
-        if bulk_silicate_planet is not None and alphas is not None and stellar_dex is not None:
-            raise ValueError("Cannot pass all bulk_silicate_planet, alphas, "
-                             "and stellar_dex, as values may be contradictory.")
-        
     @property
     def bulk_planet(self) -> dict[str, float] | None:
         """dict[str, float] or None : Bulk planet composition in wt% oxides.
@@ -116,20 +115,20 @@ class Planet(object):
         if self._stellar_dex is not None:
             self._bulk_planet = conv.calculate_bulk_planet_from_dex(self._stellar_dex)
             return self._bulk_planet
-        # TODO: reverse calculation (BSP + alphas → bulk_planet) not yet implemented
+        if self._bulk_silicate_planet is not None and self._alphas is not None:
+            self._bulk_planet = self._calculate_bulk_from_silicate(
+                bulk_silicate_planet=self._bulk_silicate_planet, alphas=self._alphas)
+            return self._bulk_planet
         # Explain what's missing
         if self._bulk_silicate_planet is not None and self._alphas is None:
             w.warn("bulk_planet cannot be computed: "
                    "bulk_silicate_planet was provided but alphas is missing.",
                    category=UserWarning)
-        elif self._stellar_dex is None:
+        else:
             w.warn("bulk_planet is not set and cannot be computed. "
                    "Pass bulk_planet, stellar_dex, or "
                    "(bulk_silicate_planet + alphas).",
                    category=UserWarning)
-        else:
-            w.warn("Could not calculate bulk_planet composition. Check that your inputs have correct"
-               " values.")
         return None
 
     @property
@@ -165,8 +164,10 @@ class Planet(object):
         """
         if self._stellar_dex is not None:
             return self._stellar_dex
-        # TODO: reverse calculation (bulk_planet → dex) not yet implemented
-        # TODO: reverse calculation (BSP + alphas → bulk_planet → dex) not yet implemented
+        bulk = self.bulk_planet
+        if bulk is not None:
+            self._stellar_dex = conv.calculate_dex_from_bulk_planet(bulk)
+            return self._stellar_dex
         w.warn("stellar_dex is not set and cannot be computed. "
                "Pass stellar_dex, bulk_planet, or "
                "(bulk_silicate_planet + alphas).",
@@ -182,9 +183,14 @@ class Planet(object):
         """
         if self._alphas is not None:
             return self._alphas
-        # TODO: reverse calculation (bulk_planet + BSP → alphas) not yet implemented
-        # Cannot auto-compute alphas from stellar_dex + BSP alone;
-        # would need both bulk_planet and bulk_silicate_planet.
+        if self._bulk_planet is not None and self._bulk_silicate_planet is not None:
+            bp_elements = conv.convert_composition(self._bulk_planet, 'wtpt_elements')
+            bsp_elements = conv.convert_composition(self._bulk_silicate_planet, 'wtpt_elements')
+            self._alphas = {}
+            for el in bp_elements:
+                if bp_elements[el] > 0 and el in bsp_elements:
+                    self._alphas[el] = bsp_elements[el] / bp_elements[el]
+            return self._alphas
         # Explain what's missing
         missing = []
         if self._bulk_planet is None:
@@ -362,5 +368,66 @@ class Planet(object):
             bsp_elements, "wtpt_elements"
         )
         return self._bulk_silicate_planet
-        
-        
+
+    def _calculate_bulk_from_silicate(self, bulk_silicate_planet: dict[str, float],
+                                      alphas: dict[str, float]) -> dict[str, float]:
+        """
+        Recovers a bulk planet composition from a bulk silicate planet
+        composition and core partitioning fractions (alphas). This is the
+        reverse of :meth:`_calculate_silicate_from_bulk`.
+
+        The algorithm reverses the Putirka & Rarick (2019) procedure:
+        Fe and Ni concentrations are inflated by their reciprocal alphas,
+        and all lithophile elements are rescaled to fill the remaining
+        mass budget. The result is in wt% oxides, normalized to 100.
+
+        Note that this reversal assumes the same alpha values used in the
+        forward calculation. Different alphas will produce a different
+        (but internally consistent) bulk planet. This is an intrinsic
+        ambiguity of the core partitioning model — see CAVEATS.md.
+
+        Parameters
+        ----------
+        bulk_silicate_planet : dict[str, float]
+            Bulk silicate planet composition in wt% oxides.
+        alphas : dict[str, float]
+            Core partitioning fractions (same definition as forward:
+            alpha = BSP_element / BP_element). Must include 'Fe'.
+
+        Returns
+        -------
+        dict[str, float]
+            Bulk planet composition in wt% oxides.
+        """
+        if "Fe" not in alphas:
+            raise ValueError("alphas must include 'Fe'.")
+
+        # BSP → wt% elements
+        bsp_elements = conv.convert_composition(bulk_silicate_planet, 'wtpt_elements')
+
+        # Reverse the alpha scaling for Fe and Ni
+        bp_fe = bsp_elements.get("Fe", 0.0) / alphas["Fe"]
+        bp_ni = bsp_elements.get("Ni", 0.0) / alphas.get("Ni", 1.0)
+
+        bsp_fe = bsp_elements.get("Fe", 0.0)
+        bsp_ni = bsp_elements.get("Ni", 0.0)
+
+        # Reverse the lithophile rescaling
+        remaining_mass_bsp = 100.0 - bsp_fe - bsp_ni
+        remaining_mass_bp = 100.0 - bp_fe - bp_ni
+
+        if remaining_mass_bsp == 0:
+            raise ValueError("BSP has no lithophile elements (Fe + Ni = 100%).")
+
+        ratio = remaining_mass_bp / remaining_mass_bsp
+
+        bp_elements = {}
+        for el, val in bsp_elements.items():
+            if el == "Fe":
+                bp_elements[el] = bp_fe
+            elif el == "Ni":
+                bp_elements[el] = bp_ni
+            else:
+                bp_elements[el] = val * ratio
+
+        return conv.convert_to_wtpt_oxides(bp_elements, "wtpt_elements")
