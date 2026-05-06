@@ -165,6 +165,7 @@ class Star(object):
         """
         if units not in conv.VALID_UNITS:
             raise ValueError(...)
-        if self._stellar_dex is None and self._wtpt_oxides is None:
+        wtpt_oxides = self.wtpt_oxides
+        if wtpt_oxides is None:
             raise ValueError("Cannot compute composition: no stellar_dex or wtpt_oxides is set.")
-        return conv.convert_composition(self.wtpt_oxides, units)
+        return conv.convert_composition(wtpt_oxides, units)
