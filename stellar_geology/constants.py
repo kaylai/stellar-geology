@@ -17,6 +17,7 @@ cationMass = {
     'Ni': 58.6934,
     'Ca': 40.078,
     'Na': 22.98977,
+    'K' : 39.098,
     'C' :  12.0107,
     'O' :  15.9994,
     'S' :  32.065,
@@ -33,6 +34,7 @@ oxideMass = { # volatile-free
     'NiO'  : 74.6924,
     'CaO'  : 56.077,
     'Na2O' : 61.9785386,
+    'K2O'  : 94.195,
 }
 
 oxides_to_elements = { # volatile-free
@@ -46,6 +48,7 @@ oxides_to_elements = { # volatile-free
     'NiO'  : 'Ni',
     'CaO'  : 'Ca',
     'Na2O' : 'Na',
+    'K2O'  : 'K',
 }
 
 elements_to_oxides = {v: k for k, v in oxides_to_elements.items()}
@@ -61,6 +64,7 @@ A_El = {
     'Ni': 6.22,
     'Ca': 6.34,
     'Na': 6.3,
+    'K' : 0.0, # I don't know what A_El is yet... see P&R spreadsheets
     'C' :  8.39,
     'O' :  8.73,
     'S' :  7.16,
