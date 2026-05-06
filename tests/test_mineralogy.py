@@ -100,7 +100,7 @@ def test_round_trip_mineralogy():
 
 def test_reverse_mineralogy_missing_phase():
     with pytest.raises(ValueError, match="Missing required mineral phases"):
-        calculate_composition_from_mineralogy({"olivine": 0.5, "garnet": 0.1})
+        calculate_composition_from_mineralogy({"olivine": 0.5, "garnet": 0.1}, mg_number=0.89)
 
 def test_reverse_mineralogy_bad_mg_number():
     with pytest.raises(ValueError, match="mg_number"):

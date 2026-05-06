@@ -4,7 +4,6 @@ compositions and converting them through the dex-to-oxide pipeline.
 
 from . import conversions as conv
 from . import constants as const
-import warnings as w
 
 __all__ = ['Star']
 
@@ -128,10 +127,14 @@ class Star(object):
             self._wtpt_oxides = conv.calculate_wtpt_oxides_from_wtpt_elements(self.wtpt_elements)
         return self._wtpt_oxides
 
-    def get_composition(self, units: str = 'wtpt_oxides', normalization: str | None = None) -> dict[str, float] | None:
+    def get_composition(self, units: str = 'wtpt_oxides') -> dict[str, float]:
         """
-        Return the star's composition in the requested units with optional
-        normalization.
+        Return the star's composition in the requested units.
+
+        Output dicts always sum to the target for the requested units —
+        100 for percent units (``wtpt_*``, ``molpt_*``) and 1.0 for
+        fraction units (``wtfrac_*``, ``molfrac_*``). ``molfrac_singleO``
+        is the exception: it is never normalized.
 
         Parameters
         ----------
@@ -139,15 +142,19 @@ class Star(object):
             One of 'wtpt_oxides', 'wtpt_elements', 'wtfrac_oxides',
             'wtfrac_elements', 'molfrac_oxides', 'molfrac_elements',
             'molfrac_singleO', 'molpt_oxides', 'molpt_elements'.
-        normalization : str or None
-            One of None, 'none', 'standard', 'fixedvolatiles',
-            'additionalvolatiles'.
 
         Returns
         -------
-        dict[str, float] or None
-            Composition in the requested units, or None if no compositional
-            data is set.
+        dict[str, float]
+            Composition in the requested units.
+
+        Raises
+        ------
+        ValueError
+            If ``units`` is invalid, or if no compositional data has been
+            provided to the Star (neither ``stellar_dex`` nor ``wtpt_oxides``),
+            or the requested element-basis output is unavailable for a Star
+            initialized from oxides.
 
         Notes
         -----
@@ -156,39 +163,9 @@ class Star(object):
         stellar_dex. When initialized from wtpt_oxides, volatile elements are
         not available — only rock-forming elements are returned.
         """
-        if self._stellar_dex is None and self._wtpt_oxides is None:
-            w.warn("Cannot compute composition: no stellar_dex or wtpt_oxides is set.",
-                   category=UserWarning)
-            return None
-
         if units not in conv.VALID_UNITS:
-            raise ValueError(f"units must be one of {conv.VALID_UNITS}, got '{units}'.")
-
-        # Special case: element wt outputs include volatile elements (C, O, S)
-        # from the stellar pipeline that aren't present in oxide-based conversions
-        if units in ('wtpt_elements', 'wtfrac_elements'):
-            wt_elements = self.wtpt_elements
-            if wt_elements is None:
-                w.warn("Cannot compute element composition.",
-                       category=UserWarning)
-                return None
-            if units == 'wtpt_elements':
-                result = dict(wt_elements)
-            else:
-                result = {k: v / 100.0 for k, v in wt_elements.items()}
-        else:
-            wt_oxides = self.wtpt_oxides
-            if wt_oxides is None:
-                w.warn("Cannot compute oxide composition.",
-                       category=UserWarning)
-                return None
-            result = conv.convert_composition(wt_oxides, units)
-
-        if normalization is not None and normalization != 'none':
-            if units == 'molfrac_singleO':
-                w.warn("Normalization is not supported for units='molfrac_singleO' "
-                       "and will be ignored.", category=UserWarning)
-            else:
-                result = conv.normalize_composition(result, normalization, units)
-
-        return result
+            raise ValueError(...)
+        wtpt_oxides = self.wtpt_oxides
+        if wtpt_oxides is None:
+            raise ValueError("Cannot compute composition: no stellar_dex or wtpt_oxides is set.")
+        return conv.convert_composition(wtpt_oxides, units)

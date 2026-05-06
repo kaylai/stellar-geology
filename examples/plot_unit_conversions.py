@@ -2,8 +2,7 @@
 Composition Unit Conversions
 =============================
 
-The same stellar composition viewed in different unit systems.
-``stellar_geology`` supports wt%, mol%, and mole fraction representations.
+The same stellar composition viewed in different unit systems. ``stellar_geology`` supports wt%, mol%, and mole fraction representations.
 """
 
 # %%
@@ -41,9 +40,7 @@ single_o = star.get_composition(units="molfrac_singleO")
 # %%
 # Compare all three unit systems
 # ------------------------------
-# The same composition looks quite different depending on the unit system.
-# Weight percent emphasizes heavy oxides (FeO, SiO2), while mole fraction
-# emphasizes the most abundant molecules.
+# The same composition looks quite different depending on the unit system. Weight percent emphasizes heavy oxides (FeO, SiO2), while mole fraction emphasizes the most abundant molecules.
 
 fig, axes = plt.subplots(1, 3, figsize=(12, 4))
 

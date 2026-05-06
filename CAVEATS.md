@@ -11,10 +11,11 @@ The forward CIPW norm compresses FeO + MgO into a single "FmO" component. Going
 backward, `calculate_composition_from_mineralogy()` needs a Mg# (molar Mg/(Mg+Fe))
 to split FmO back into FeO and MgO.
 
-The default is 0.89, which is approximately Earth's upper mantle.Different Mg#
-values will produce different BSP compositions that all map to the same
-mineralogy. If you're working with a composition where you know the Mg#, pass it
-explicitly.
+There is no universal default — the Mg# is a required argument, because
+different Mg# values produce different BSP compositions that all map to the
+same mineralogy. Pass the value you know or are willing to assume. Earth's
+upper mantle is approximately 0.89, which is a reasonable starting point if
+you have no other information.
 
 - **TiO2, Na2O, Cr2O3, MnO, NiO, ...** are discarded during the forward CIPW
 calculation. The reverse can only recover SiO2, Al2O3, FeO, MgO, and CaO. If you
@@ -26,15 +27,15 @@ concentrations from an independent source.
 The forward direction uses alpha values (core partitioning fractions) to strip
 Fe and Ni into the core. The reverse inflates them back. But:
 
-- **Different alphas → different bulk planets.** The reverse requires the
-  *same* alpha values used in the forward calculation. If you don't know the
+- **Different alphas create different bulk planets.** The reverse requires the
+  same alpha values used in the forward calculation. If you don't know the
   original alphas, the recovered bulk planet is model-dependent.
 
-## 3. Bulk Planet Oxides → Dex: Only "normalized" dex recovered
+## 3. Bulk Planet Oxides -> Dex: Only "normalized" dex recovered
 
-The forward pipeline includes a normalization step (total_wt_atoms → wtpt_elements)
+The forward pipeline includes a normalization step (total_wt_atoms to wtpt_elements)
 that divides by the total mass, scaling everything to sum to 100%. This normalization
-is *irreversible* — the absolute total mass is discarded.
+is irreversible — the absolute total mass is discarded.
 
 ### What this means in practice
 
@@ -61,12 +62,41 @@ You would need one externally calibrated dex value for any single element. Then
 set C = dex_known[X] - dex_recovered[X] and shift all values by C. This is
 equivalent to having one spectroscopic measurement to anchor the scale.
 
-## 4. Volatile Elements (C, O, S)
+#### Worked example
 
-The forward pipeline carries volatile elements (C, O, S) through unit conversion
-steps (they appear in the element wt% output). We assume total loss of elements
-like C, S, and H. O is conserved when elements are converted to oxides, but we
-assume "stoichiometric" oxides (MgO is just MgO, though. No 1-x business).
+Suppose your reverse pipeline recovered:
+
+```python
+dex_recovered = {"Fe": -0.42, "Mg": -0.47, "Si": -0.45, "Ca": -0.40, "Al": -0.39, "Ni": -0.38}
+```
+
+The interelemental differences are correct (e.g. dex[Si] − dex[Fe] = −0.03), but
+every value is shifted by an unknown constant C relative to the true stellar
+dex.
+
+Now suppose a spectroscopic measurement gives you the absolute [Fe/H] for this
+star: dex_known["Fe"] = 0.10. Compute the offset and shift everything:
+
+```python
+C = dex_known["Fe"] - dex_recovered["Fe"]   # 0.10 − (−0.42) = 0.52
+dex_anchored = {el: v + C for el, v in dex_recovered.items()}
+# {"Fe": 0.10, "Mg": 0.05, "Si": 0.07, "Ca": 0.12, "Al": 0.13, "Ni": 0.14}
+```
+
+`dex_anchored["Fe"]` now equals the spectroscopic value by construction, and
+every other element rides along — their ratios to Fe (and to each other) are
+unchanged from the recovered values, which were already exact. Any single
+element will work as the anchor; Fe is just convenient because [Fe/H] is the
+most commonly reported stellar abundance.
+
+## 4. Volatile Elements (C, S, H)
+
+Except for O, which we assume is bound to cations, stellar_geology treats
+compositions as volatile-free in all user-facing outputs. Volatile elements
+(C, S, H — and oxide forms like H2O, CO2) passed as inputs trigger a UserWarning
+and are then dropped. We assume total loss of volatiles during planet formation.
+O is conserved when rock-forming elements are converted to oxides, but we assume
+"stoichiometric" oxides (MgO is just MgO — no Mg(1-x)O business).
 
 Starting from mineralogy, no volatile information can be recovered and is not
 assumed.
