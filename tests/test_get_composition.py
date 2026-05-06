@@ -151,69 +151,33 @@ def test_convert_composition_invalid_units_raises():
 # NORMALIZATION TESTS
 # ============================================================
 
-def test_normalize_standard_wtpt_sums_to_100():
+def test_normalize_wtpt_sums_to_100():
     unnormalized = {'SiO2': 40.0, 'MgO': 30.0, 'FeO': 20.0}  # sums to 90
-    normed = conv.normalize_composition(unnormalized, normalization='standard',
-                                         units='wtpt_oxides')
+    normed = conv.normalize_composition(unnormalized, units='wtpt_oxides')
     assert sum(normed.values()) == pytest.approx(100.0)
 
-def test_normalize_standard_preserves_ratios():
+def test_normalize_preserves_ratios():
     unnormalized = {'SiO2': 40.0, 'MgO': 20.0}  # 2:1 ratio
-    normed = conv.normalize_composition(unnormalized, normalization='standard',
-                                         units='wtpt_oxides')
+    normed = conv.normalize_composition(unnormalized, units='wtpt_oxides')
     assert normed['SiO2'] / normed['MgO'] == pytest.approx(2.0)
 
-def test_normalize_standard_mol_sums_to_one():
+def test_normalize_mol_sums_to_one():
     molfrac = conv.convert_composition(sample_wtpt_oxides, 'molfrac_oxides')
     # scale down to make unnormalized
     unnormed = {k: v * 0.5 for k, v in molfrac.items()}
-    normed = conv.normalize_composition(unnormed, normalization='standard',
-                                         units='molfrac_oxides')
+    normed = conv.normalize_composition(unnormed, units='molfrac_oxides')
     assert sum(normed.values()) == pytest.approx(1.0)
-
-def test_normalize_fixedvolatiles_preserves_h2o():
-    comp = {'SiO2': 40.0, 'MgO': 30.0, 'FeO': 20.0, 'H2O': 3.0}
-    normed = conv.normalize_composition(comp, normalization='fixedvolatiles',
-                                         units='wtpt_oxides')
-    assert normed['H2O'] == pytest.approx(3.0)
-    non_vol_sum = sum(v for k, v in normed.items() if k not in ('H2O', 'CO2'))
-    assert non_vol_sum == pytest.approx(97.0)
-    assert sum(normed.values()) == pytest.approx(100.0)
-
-def test_normalize_fixedvolatiles_preserves_h2o_and_co2():
-    comp = {'SiO2': 40.0, 'MgO': 30.0, 'FeO': 20.0, 'H2O': 3.0, 'CO2': 2.0}
-    normed = conv.normalize_composition(comp, normalization='fixedvolatiles',
-                                         units='wtpt_oxides')
-    assert normed['H2O'] == pytest.approx(3.0)
-    assert normed['CO2'] == pytest.approx(2.0)
-    non_vol_sum = sum(v for k, v in normed.items() if k not in ('H2O', 'CO2'))
-    assert non_vol_sum == pytest.approx(95.0)
-    assert sum(normed.values()) == pytest.approx(100.0)
-
-def test_normalize_additionalvolatiles_nonvol_sums_to_100():
-    comp = {'SiO2': 40.0, 'MgO': 30.0, 'FeO': 20.0, 'H2O': 3.0}
-    normed = conv.normalize_composition(comp, normalization='additionalvolatiles',
-                                         units='wtpt_oxides')
-    non_vol_sum = sum(v for k, v in normed.items() if k not in ('H2O', 'CO2'))
-    assert non_vol_sum == pytest.approx(100.0)
-    assert normed['H2O'] == pytest.approx(3.0)
-    assert sum(normed.values()) == pytest.approx(103.0)
-
-def test_normalize_none_is_identity():
-    comp = {'SiO2': 40.0, 'MgO': 30.0, 'FeO': 20.0}
-    normed = conv.normalize_composition(comp, normalization='none',
-                                         units='wtpt_oxides')
-    assert normed == comp
-
-def test_normalize_invalid_normalization_raises():
-    with pytest.raises(ValueError):
-        conv.normalize_composition(sample_wtpt_oxides, normalization='invalid',
-                                    units='wtpt_oxides')
 
 def test_normalize_invalid_units_raises():
     with pytest.raises(ValueError):
-        conv.normalize_composition(sample_wtpt_oxides, normalization='standard',
-                                    units='invalid_units')
+        conv.normalize_composition(sample_wtpt_oxides, units='invalid_units')
+
+def test_normalize_molfrac_singleO_raises():
+    """molfrac_singleO values are per-oxygen ratios, not parts of a whole;
+    sum-rescaling would distort their meaning, so the call should refuse."""
+    singleO = conv.convert_composition(sample_wtpt_oxides, 'molfrac_singleO')
+    with pytest.raises(ValueError, match="molfrac_singleO"):
+        conv.normalize_composition(singleO, units='molfrac_singleO')
 
 
 # ============================================================
@@ -284,19 +248,15 @@ def test_star_get_composition_molpt_elements_sums_to_100():
     comp = s.get_composition(units='molpt_elements')
     assert sum(comp.values()) == pytest.approx(100.0)
 
-def test_star_get_composition_with_normalization():
-    s = Star(stellar_dex=star_32768_dex)
-    comp = s.get_composition(units='wtpt_oxides', normalization='standard')
-    assert sum(comp.values()) == pytest.approx(100.0)
-
 def test_star_get_composition_invalid_units_raises():
     s = Star(stellar_dex={'Si': 0.27})
     with pytest.raises(ValueError):
         s.get_composition(units='invalid')
 
-def test_star_get_composition_empty_returns_none():
+def test_star_get_composition_empty_raises():
     s = Star()
-    assert s.get_composition(units='wtpt_oxides') is None
+    with pytest.raises(ValueError, match="no stellar_dex or wtpt_oxides"):
+        s.get_composition(units='wtpt_oxides')
 
 
 # ============================================================
@@ -343,30 +303,6 @@ def test_planet_get_composition_bulk_planet_molfrac_singleO():
     for key in result:
         assert key not in sample_wtpt_oxides
 
-def test_planet_get_composition_molfrac_singleO_ignores_normalization():
-    """Normalization should have no effect on molfrac_singleO results."""
-    p = Planet(bulk_planet=sample_wtpt_oxides)
-    without = p.get_composition(which='bulk_planet', units='molfrac_singleO')
-    with_norm = p.get_composition(which='bulk_planet', units='molfrac_singleO',
-                                   normalization='standard')
-    assert with_norm == pytest.approx(without)
-
-def test_star_get_composition_molfrac_singleO_normalization_warns():
-    """Normalization with molfrac_singleO on Star should warn."""
-    s = Star(stellar_dex=star_32768_dex)
-    import warnings
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        s.get_composition(units='molfrac_singleO', normalization='standard')
-        assert len(w) >= 1
-        assert "not supported" in str(w[-1].message).lower()
-
-def test_star_get_composition_wtpt_elements_normalization_works():
-    """Normalization with wtpt_elements on Star should normalize."""
-    s = Star(stellar_dex=star_32768_dex)
-    result = s.get_composition(units='wtpt_elements', normalization='standard')
-    assert sum(result.values()) == pytest.approx(100.0)
-
 def test_planet_get_composition_bulk_planet_molpt_oxides():
     p = Planet(bulk_planet=sample_wtpt_oxides)
     result = p.get_composition(which='bulk_planet', units='molpt_oxides')
@@ -383,11 +319,13 @@ def test_planet_get_composition_bsp_wtpt():
     result = p.get_composition(which='bulk_silicate_planet', units='wtpt_oxides')
     assert result == pytest.approx(comp)
 
-def test_planet_get_composition_with_normalization():
+def test_planet_get_composition_renormalizes_input_to_target():
+    """convert_composition rescales every output to its target — so even
+    if the user-provided dict doesn't sum to 100, the wtpt_oxides output
+    does."""
     unnormalized = {'SiO2': 40.0, 'MgO': 30.0, 'FeO': 20.0}  # sums to 90
     p = Planet(bulk_planet=unnormalized)
-    result = p.get_composition(which='bulk_planet', units='wtpt_oxides',
-                                normalization='standard')
+    result = p.get_composition(which='bulk_planet', units='wtpt_oxides')
     assert sum(result.values()) == pytest.approx(100.0)
 
 def test_planet_get_composition_invalid_which_raises():
@@ -400,9 +338,17 @@ def test_planet_get_composition_invalid_units_raises():
     with pytest.raises(ValueError):
         p.get_composition(which='bulk_planet', units='invalid')
 
-def test_planet_get_composition_empty_returns_none():
+def test_planet_get_composition_empty_raises():
     p = Planet()
-    assert p.get_composition(which='bulk_planet', units='wtpt_oxides') is None
+    with pytest.raises(ValueError, match="bulk_planet"):
+        p.get_composition(which='bulk_planet', units='wtpt_oxides')
+
+def test_planet_get_composition_missing_alphas_raises():
+    # bulk_silicate_planet is requested but only bulk_planet was given
+    # (no alphas) — should raise with a message naming the missing input.
+    p = Planet(bulk_planet=sample_wtpt_oxides)
+    with pytest.raises(ValueError, match="alphas"):
+        p.get_composition(which='bulk_silicate_planet', units='wtpt_oxides')
 
 
 # ============================================================

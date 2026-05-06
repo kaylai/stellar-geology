@@ -100,10 +100,42 @@ def test_round_trip_mineralogy():
 
 def test_reverse_mineralogy_missing_phase():
     with pytest.raises(ValueError, match="Missing required mineral phases"):
-        calculate_composition_from_mineralogy({"olivine": 0.5, "garnet": 0.1})
+        calculate_composition_from_mineralogy({"olivine": 0.5, "garnet": 0.1}, mg_number=0.89)
 
 def test_reverse_mineralogy_bad_mg_number():
     with pytest.raises(ValueError, match="mg_number"):
         calculate_composition_from_mineralogy(EXPECTED_MINERALOGY, mg_number=0.0)
     with pytest.raises(ValueError, match="mg_number"):
         calculate_composition_from_mineralogy(EXPECTED_MINERALOGY, mg_number=1.5)
+
+
+# ---------------------------------------------------------------------------
+# Compositions with NaN or missing non-critical oxides
+# ---------------------------------------------------------------------------
+def test_mineralogy_with_nan_noncritical_oxides():
+    """BSP with NaN in non-critical oxides (TiO2, NiO) should still compute
+    valid mineralogy after filter strips them."""
+    import math
+    bsp_with_nan = {
+        'SiO2': 50.82, 'TiO2': float('nan'), 'Al2O3': 3.76,
+        'Cr2O3': float('nan'), 'FeO': 8.39, 'MnO': float('nan'),
+        'MgO': 32.35, 'CaO': 4.4, 'Na2O': 0.27, 'NiO': float('nan'),
+    }
+    from stellar_geology.planet import Planet
+    p = Planet(bulk_silicate_planet=bsp_with_nan)
+    result = calculate_mineralogy(p.bulk_silicate_planet)
+    assert all(not math.isnan(v) for v in result.values())
+
+def test_mineralogy_with_only_critical_oxides():
+    """BSP with only the 5 critical oxides should work fine."""
+    bsp_minimal = {'SiO2': 45.0, 'Al2O3': 3.5, 'FeO': 15.3, 'MgO': 31.5, 'CaO': 2.7}
+    result = calculate_mineralogy(bsp_minimal)
+    assert all(isinstance(v, float) for v in result.values())
+
+def test_mineralogy_missing_oxide_warns_and_fills_zero():
+    """BSP missing Al2O3 should warn, fill with 0, and compute valid mineralogy."""
+    import math
+    bsp_no_al = {'SiO2': 45.0, 'FeO': 15.3, 'MgO': 31.5, 'CaO': 2.7}
+    with pytest.warns(UserWarning, match="missing from silicate composition"):
+        result = calculate_mineralogy(bsp_no_al)
+    assert all(not math.isnan(v) for v in result.values())

@@ -4,7 +4,7 @@ Includes atomic and oxide molar masses, solar abundance references,
 and mapping dictionaries between oxide and element representations.
 """
 
-__all__ = ['oxides_to_elements', 'elements_to_oxides']
+__all__ = ['oxides_to_elements', 'elements_to_oxides', 'filter_compositional_keys']
 
 cationMass = {
     'Si': 28.0855,
@@ -73,3 +73,24 @@ CationNum = {'SiO2': 1, 'MgO': 1, 'FeO': 1, 'CaO': 1, 'Al2O3': 2, 'Na2O': 2,
 OxygenNum = {'SiO2': 2, 'MgO': 1, 'FeO': 1, 'CaO': 1, 'Al2O3': 3, 'Na2O': 1,
              'K2O': 1, 'MnO': 1, 'TiO2': 2, 'P2O5': 5, 'Cr2O3': 3,
              'NiO': 1, 'CoO': 1, 'Fe2O3': 3, 'H2O': 1, 'CO2': 2, 'F2O': 1}
+
+_composition_keys = set(elements_to_oxides) | set(oxides_to_elements)
+
+
+def filter_compositional_keys(comp: dict[str, float],
+                              label: str = 'composition') -> dict[str, float]:
+    """Warn about and remove non-compositional keys from a composition dict.
+
+    Accepts plain dicts or pandas Series (converted via ``.to_dict()``).
+    """
+    import warnings as w
+    if hasattr(comp, 'to_dict'):
+        comp = comp.to_dict()
+    superfluous = [k for k in comp if k not in _composition_keys]
+    if superfluous:
+        w.warn(f"{superfluous} in {label} were not recognized as compositional "
+               "parameters and will be ignored in calculations.",
+               category=UserWarning)
+    import math
+    return {k: (0.0 if (v is None or (isinstance(v, float) and math.isnan(v))) else v)
+            for k, v in comp.items() if k in _composition_keys}

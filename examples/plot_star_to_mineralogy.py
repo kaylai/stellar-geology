@@ -2,17 +2,13 @@
 Star to Mineralogy Pipeline
 ============================
 
-The core workflow: create a star from spectroscopic dex measurements,
-view its composition, and calculate mantle mineralogy from a bulk
-silicate planet composition.
+The core workflow: create a star from spectroscopic dex measurements, view its composition, and calculate mantle mineralogy from a bulk silicate planet composition.
 """
 
 # %%
 # Create a Star
 # -------------
-# Stellar compositions are specified in dex notation — logarithmic
-# abundances relative to the Sun. Positive values mean enriched,
-# negative values mean depleted.
+# Stellar compositions are specified in dex notation — logarithmic abundances relative to the Sun. Positive values mean enriched, negative values mean depleted.
 
 import matplotlib.pyplot as plt
 import stellar_geology as sg
@@ -31,8 +27,7 @@ for oxide, pct in composition.items():
 # %%
 # Calculate Mineralogy
 # --------------------
-# Given a bulk silicate planet composition (wt% oxides), CIPW normative
-# mineralogy predicts the equilibrium mineral assemblage.
+# Given a bulk silicate planet composition (wt% oxides), CIPW normative mineralogy predicts the equilibrium mineral assemblage.
 
 bsp = {"SiO2": 45.0, "Al2O3": 4.0, "FeO": 8.0, "MgO": 38.0, "CaO": 3.5}
 
@@ -45,8 +40,7 @@ for mineral, fraction in mineralogy.items():
 # %%
 # Normalize for ternary plotting
 # ------------------------------
-# The ``plot_norm`` function normalizes olivine, clinopyroxene, and
-# orthopyroxene to sum to 1 — ready for a ternary diagram.
+# The ``plot_norm`` function normalizes olivine, clinopyroxene, and orthopyroxene to sum to 1 — ready for a ternary diagram.
 
 ternary = sg.plot_norm(mineralogy)
 
@@ -57,8 +51,7 @@ for mineral, fraction in ternary.items():
 # %%
 # Visualize the mineral assemblage
 # ---------------------------------
-# A pie chart shows the relative proportions of each mineral phase
-# in the predicted mantle.
+# A pie chart shows the relative proportions of each mineral phase in the predicted mantle.
 
 # Filter out zero-fraction minerals for a cleaner chart
 nonzero = {m: f for m, f in mineralogy.items() if f > 0}

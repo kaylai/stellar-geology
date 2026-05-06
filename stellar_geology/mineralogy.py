@@ -59,8 +59,18 @@ def calculate_mineralogy(silicate_composition: dict[str, float], units: str = 'w
     if silicate_composition is not None and units != 'wtpt_oxides':
         silicate_composition = conv.convert_to_wtpt_oxides(silicate_composition, units)
     else:
-        silicate_composition = conv.normalize_composition(silicate_composition, 'standard', 'wtpt_oxides')
-    
+        silicate_composition = conv.normalize_composition(silicate_composition, 'wtpt_oxides')
+
+    # Fill missing CIPW oxides with 0 and warn
+    import warnings as w
+    cipw_oxides = ["SiO2", "Al2O3", "FeO", "MgO", "CaO"]
+    missing = [ox for ox in cipw_oxides if ox not in silicate_composition]
+    if missing:
+        w.warn(f"{missing} missing from silicate composition and will be "
+               "set to 0 for mineralogy calculation.", category=UserWarning)
+        for ox in missing:
+            silicate_composition[ox] = 0.0
+
     mol_prop_ox_cipw = _calculate_mol_prop_ox_cipw(silicate_composition)
     mol_frac_cipw = _calculate_mol_frac_cipw(mol_prop_ox_cipw)
     
@@ -72,7 +82,7 @@ def calculate_mineralogy(silicate_composition: dict[str, float], units: str = 'w
     
 def _calculate_mol_prop_ox_cipw(silicate_composition: dict[str, float]) -> dict[str, float]:
     xtal_oxides = ["SiO2", "Al2O3", "FeO", "MgO", "CaO"]
-    mol_prop_ox_cipw = {ox: (silicate_composition[ox] * const.CationNum[ox]) /
+    mol_prop_ox_cipw = {ox: (silicate_composition.get(ox, 0.0) * const.CationNum[ox]) /
                         const.oxideMass[ox] for ox in xtal_oxides}
     return mol_prop_ox_cipw
 
@@ -110,7 +120,7 @@ def _mol_frac_cipw_to_wtpt_oxides(mol_prop_ox_cipw: dict[str, float]) -> dict[st
     wt_sum = sum(wt_raw.values())
     return {ox: 100.0 * v / wt_sum for ox, v in wt_raw.items()}
 
-def calculate_composition_from_mineralogy(mineralogy: dict[str, float], mg_number: float = 0.89) -> dict[str, float]:
+def calculate_composition_from_mineralogy(mineralogy: dict[str, float], mg_number: float) -> dict[str, float]:
     """
     Recovers a bulk silicate planet composition (wt% oxides) from CIPW normative mineralogy.
     This is the partial inverse of calculate_mineralogy().
@@ -128,8 +138,8 @@ def calculate_composition_from_mineralogy(mineralogy: dict[str, float], mg_numbe
         Dictionary with keys "olivine", "clinopyroxene", "orthopyroxene", "garnet"
         and float values (mol fractions, as returned by calculate_mineralogy).
     mg_number : float
-        Molar Mg# = Mg/(Mg+Fe), range (0, 1]. Default 0.89 (approximate Earth
-        mantle value). Controls the FeO/MgO split in the recovered composition.
+        Molar Mg# = Mg/(Mg+Fe), range (0, 1]. Controls how the mafic oxides mineralogy component,
+        FmO, is split into FeO and MgO in the reverse pipeline.
 
     Returns
     -------

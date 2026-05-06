@@ -7,6 +7,7 @@ from . import constants as const
 __all__ = [
     'VALID_UNITS',
     'calculate_bulk_planet_from_dex',
+    'calculate_dex_from_bulk_planet',
     'convert_composition',
     'convert_to_wtpt_oxides',
     'normalize_composition',
@@ -162,6 +163,168 @@ def calculate_wtpt_oxides_from_wtpt_elements(wtpt_elements: dict[str, float]) ->
     wtpt_oxides = {k: 100*v/wtpt_oxides_sum for k, v in wtpt_oxides.items()}
 
     return wtpt_oxides
+
+
+#--- REVERSE PIPELINE: BULK PLANET OXIDES TO DEX ---#
+# These functions invert the forward pipeline above. Each one reverses a single
+# step, mirroring the forward function naming convention.
+#
+# IMPORTANT CAVEAT: the forward step calculate_wtpt_elements_from_total_wt_atoms
+# normalizes to 100%, discarding the absolute total mass. This means the full
+# round-trip dex → oxides → dex recovers dex values that are correct *relative
+# to each other* but shifted by a constant offset. The interelemental ratios
+# (which determine mineralogy, BSP, etc.) are perfectly preserved. The absolute
+# dex offset is irrecoverable without external calibration. This is documented
+# in detail in CAVEATS.md.
+
+import math
+
+def calculate_wtpt_elements_from_wtpt_oxides(wtpt_oxides: dict[str, float]) -> dict[str, float]:
+    """Convert wt% oxides to wt% elements (volatile-free, normalized to 100).
+
+    Reverse of :func:`calculate_wtpt_oxides_from_wtpt_elements`. Uses the
+    oxide-to-element mass conversion and renormalizes. Note that volatile
+    elements (C, O, S) cannot be recovered from oxide data — only rock-forming
+    elements are returned. This is a one-way simplucation inherent to the
+    oxide representation.
+
+    Parameters
+    ----------
+    wtpt_oxides : dict[str, float]
+        Composition in wt% oxides.
+
+    Returns
+    -------
+    dict[str, float]
+        Composition in wt% elements (volatile-free), normalized to sum to 100.
+    """
+    raw = _wt_oxides_to_wt_elements(wtpt_oxides)
+    raw_sum = sum(raw.values())
+    if raw_sum == 0:
+        return dict(raw)
+    return {k: 100.0 * v / raw_sum for k, v in raw.items()}
+
+
+def calculate_total_wt_atoms_from_wtpt_elements(wtpt_elements: dict[str, float]) -> dict[str, float]:
+    """Convert wt% elements to total weight of atoms (proportional).
+
+    Reverse of :func:`calculate_wtpt_elements_from_total_wt_atoms`. The forward
+    direction normalizes total_wt_atoms to sum to 100 (wt%), which discards
+    the absolute mass scale. Going backward, the absolute scale is
+    irrecoverable, but the *ratios* between elements are fully preserved —
+    and ratios are all that downstream steps (atoms_ref_solar, ax, dex) need.
+
+    In practice, this function returns the input values unchanged (identity
+    mapping). It exists for API symmetry with the forward pipeline and to
+    document the normalization caveat explicitly.
+
+    Parameters
+    ----------
+    wtpt_elements : dict[str, float]
+        Composition in wt% elements.
+
+    Returns
+    -------
+    dict[str, float]
+        Total weight of atoms (proportional — absolute scale unknown).
+    """
+    return dict(wtpt_elements)
+
+
+def calculate_atoms_ref_solar_from_total_wt_atoms(total_wt_atoms: dict[str, float]) -> dict[str, float]:
+    """Convert total weight of atoms to atom counts referenced to solar abundances.
+
+    Reverse of :func:`calculate_total_wt_atoms_from_atoms_ref_solar`.
+    Divides each element's weight by its atomic mass (cationMass).
+
+    Parameters
+    ----------
+    total_wt_atoms : dict[str, float]
+        Total weight of atoms.
+
+    Returns
+    -------
+    dict[str, float]
+        Atom counts referenced to solar abundances.
+    """
+    return {el: wt / const.cationMass[el] for el, wt in total_wt_atoms.items()}
+
+
+def calculate_ax_from_atoms_ref_solar(atoms_ref_solar: dict[str, float]) -> dict[str, float]:
+    """Convert atom counts referenced to solar abundances to elemental ratios (ax).
+
+    Reverse of :func:`calculate_atoms_ref_solar_from_ax`. Divides each
+    element's atom count by 10^A_El to remove the solar reference scaling.
+
+    Parameters
+    ----------
+    atoms_ref_solar : dict[str, float]
+        Atom counts referenced to solar abundances.
+
+    Returns
+    -------
+    dict[str, float]
+        Elemental ratios relative to solar.
+    """
+    return {el: ars / (10 ** const.A_El[el]) for el, ars in atoms_ref_solar.items()}
+
+
+def calculate_dex_from_ax(ax: dict[str, float]) -> dict[str, float]:
+    """Convert elemental ratios (ax) to dex notation.
+
+    Reverse of :func:`calculate_ax_from_dex`. Takes log10 of each ratio.
+    Elements with ax <= 0 are skipped with a warning, since log10 is
+    undefined for non-positive values.
+
+    Parameters
+    ----------
+    ax : dict[str, float]
+        Elemental ratios relative to solar (must be > 0).
+
+    Returns
+    -------
+    dict[str, float]
+        Stellar composition in dex notation.
+    """
+    import warnings as w
+    dex = {}
+    for el, val in ax.items():
+        if val <= 0:
+            w.warn(f"ax['{el}'] = {val} is non-positive; cannot compute log10. "
+                   "Skipping this element.", category=UserWarning)
+            continue
+        dex[el] = math.log10(val)
+    return dex
+
+
+def calculate_dex_from_bulk_planet(wtpt_oxides: dict[str, float]) -> dict[str, float]:
+    """Run the full reverse pipeline from bulk planet wt% oxides to dex notation.
+
+    Counterpart to :func:`calculate_bulk_planet_from_dex`. Chains all
+    intermediate reverse steps:
+    wtpt_oxides → wtpt_elements → total_wt_atoms → atoms_ref_solar → ax → dex.
+
+    The recovered dex values preserve interelemental ratios perfectly but are
+    shifted by a constant offset relative to the original dex values (see
+    CAVEATS.md for details). Volatile elements (C, O, S) present in the
+    original stellar dex are not recoverable from oxide data.
+
+    Parameters
+    ----------
+    wtpt_oxides : dict[str, float]
+        Bulk planet composition in wt% oxides.
+
+    Returns
+    -------
+    dict[str, float]
+        Stellar composition in dex notation (relative values).
+    """
+    wtpt_elements = calculate_wtpt_elements_from_wtpt_oxides(wtpt_oxides)
+    total_wt_atoms = calculate_total_wt_atoms_from_wtpt_elements(wtpt_elements)
+    atoms_ref_solar = calculate_atoms_ref_solar_from_total_wt_atoms(total_wt_atoms)
+    ax = calculate_ax_from_atoms_ref_solar(atoms_ref_solar)
+    dex = calculate_dex_from_ax(ax)
+    return dex
 
 
 #--- COMPOSABLE UNIT CONVERSION SYSTEM ---#
@@ -563,67 +726,47 @@ def mol_cations_to_mol_oxides(mol_cations: dict[str, float]) -> dict[str, float]
     return mol_oxides
 
 
-def normalize_composition(composition: dict[str, float], normalization: str, units: str) -> dict[str, float]:
+def normalize_composition(composition: dict[str, float], units: str) -> dict[str, float]:
     """
-    Normalize a composition dict according to the specified normalization scheme.
+    Rescale a composition dict so its values sum to the target for the
+    given units (100 for percent units, 1.0 for fraction units).
+
+    Note that :func:`convert_composition` already normalizes outputs to its
+    target (except for molfrac_singleO, see docs). This is a helper function
+    to allow the user to easily perform normalization within their own scripts
+    and essentially exists for convenience.
 
     Parameters
     ----------
     composition: dict[str, float]
         Composition to normalize.
-    normalization: str
-        One of 'none', 'standard', 'fixedvolatiles', 'additionalvolatiles'.
     units: str
-        Any valid unit string from VALID_UNITS (e.g., 'wtpt_oxides',
-        'molfrac_oxides', 'molpt_elements'). Used to determine the
-        normalization target: 100 for percent units, 1.0 for fraction units.
+        Any valid unit string from VALID_UNITS except ``'molfrac_singleO'``
+        — singleO values are cations per oxygen atom, not parts of a whole,
+        so sum-rescaling would distort their meaning.
 
     Returns
     -------
     dict[str, float]
         Normalized composition.
-    """
-    valid_normalizations = ['none', 'standard', 'fixedvolatiles', 'additionalvolatiles']
 
-    if normalization not in valid_normalizations:
-        raise ValueError(f"normalization must be one of {valid_normalizations}, got '{normalization}'.")
+    Raises
+    ------
+    ValueError
+        If ``units`` is invalid or is ``'molfrac_singleO'``.
+    """
     if units not in VALID_UNITS:
         raise ValueError(f"units must be one of {VALID_UNITS}, got '{units}'.")
+    if units == 'molfrac_singleO':
+        raise ValueError(
+            "Normalization is not defined for units='molfrac_singleO'. "
+            "molfrac_singleO values are cations per oxygen atom (not parts "
+            "of a whole), so sum-rescaling would distort their meaning. "
+            "Use a different unit if you need normalized output."
+        )
 
-    result = dict(composition)
-
-    if normalization == 'none':
-        return result
-
-    volatiles = ['H2O', 'CO2']
     target = 100.0 if 'pt' in units else 1.0
-
-    if normalization == 'standard':
-        total = sum(result.values())
-        if total == 0:
-            return result
-        result = {k: target * v / total for k, v in result.items()}
-        return result
-
-    if normalization == 'fixedvolatiles':
-        volatile_sum = sum(result.get(v, 0) for v in volatiles)
-        non_volatile_target = target - volatile_sum
-        non_volatile_sum = sum(v for k, v in result.items() if k not in volatiles)
-        if non_volatile_sum == 0:
-            return result
-        for k in result:
-            if k not in volatiles:
-                result[k] = non_volatile_target * result[k] / non_volatile_sum
-        return result
-
-    if normalization == 'additionalvolatiles':
-        non_volatile_sum = sum(v for k, v in result.items() if k not in volatiles)
-        if non_volatile_sum == 0:
-            return result
-        for k in result:
-            if k not in volatiles:
-                result[k] = target * result[k] / non_volatile_sum
-        return result
-
-    # Should be unreachable — all valid normalizations are handled above
-    raise ValueError(f"Unhandled normalization: '{normalization}'")
+    total = sum(composition.values())
+    if total == 0:
+        return dict(composition)
+    return {k: target * v / total for k, v in composition.items()}
