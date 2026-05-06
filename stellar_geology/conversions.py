@@ -726,67 +726,47 @@ def mol_cations_to_mol_oxides(mol_cations: dict[str, float]) -> dict[str, float]
     return mol_oxides
 
 
-def normalize_composition(composition: dict[str, float], normalization: str, units: str) -> dict[str, float]:
+def normalize_composition(composition: dict[str, float], units: str) -> dict[str, float]:
     """
-    Normalize a composition dict according to the specified normalization scheme.
+    Rescale a composition dict so its values sum to the target for the
+    given units (100 for percent units, 1.0 for fraction units).
+
+    Note that :func:`convert_composition` already normalizes outputs to its
+    target (except for molfrac_singleO, see docs). This is a helper function
+    to allow the user to easily perform normalization within their own scripts
+    and essentially exists for convenience.
 
     Parameters
     ----------
     composition: dict[str, float]
         Composition to normalize.
-    normalization: str
-        One of 'none', 'standard', 'fixedvolatiles', 'additionalvolatiles'.
     units: str
-        Any valid unit string from VALID_UNITS (e.g., 'wtpt_oxides',
-        'molfrac_oxides', 'molpt_elements'). Used to determine the
-        normalization target: 100 for percent units, 1.0 for fraction units.
+        Any valid unit string from VALID_UNITS except ``'molfrac_singleO'``
+        — singleO values are cations per oxygen atom, not parts of a whole,
+        so sum-rescaling would distort their meaning.
 
     Returns
     -------
     dict[str, float]
         Normalized composition.
-    """
-    valid_normalizations = ['none', 'standard', 'fixedvolatiles', 'additionalvolatiles']
 
-    if normalization not in valid_normalizations:
-        raise ValueError(f"normalization must be one of {valid_normalizations}, got '{normalization}'.")
+    Raises
+    ------
+    ValueError
+        If ``units`` is invalid or is ``'molfrac_singleO'``.
+    """
     if units not in VALID_UNITS:
         raise ValueError(f"units must be one of {VALID_UNITS}, got '{units}'.")
+    if units == 'molfrac_singleO':
+        raise ValueError(
+            "Normalization is not defined for units='molfrac_singleO'. "
+            "molfrac_singleO values are cations per oxygen atom (not parts "
+            "of a whole), so sum-rescaling would distort their meaning. "
+            "Use a different unit if you need normalized output."
+        )
 
-    result = dict(composition)
-
-    if normalization == 'none':
-        return result
-
-    volatiles = ['H2O', 'CO2']
     target = 100.0 if 'pt' in units else 1.0
-
-    if normalization == 'standard':
-        total = sum(result.values())
-        if total == 0:
-            return result
-        result = {k: target * v / total for k, v in result.items()}
-        return result
-
-    if normalization == 'fixedvolatiles':
-        volatile_sum = sum(result.get(v, 0) for v in volatiles)
-        non_volatile_target = target - volatile_sum
-        non_volatile_sum = sum(v for k, v in result.items() if k not in volatiles)
-        if non_volatile_sum == 0:
-            return result
-        for k in result:
-            if k not in volatiles:
-                result[k] = non_volatile_target * result[k] / non_volatile_sum
-        return result
-
-    if normalization == 'additionalvolatiles':
-        non_volatile_sum = sum(v for k, v in result.items() if k not in volatiles)
-        if non_volatile_sum == 0:
-            return result
-        for k in result:
-            if k not in volatiles:
-                result[k] = target * result[k] / non_volatile_sum
-        return result
-
-    # Should be unreachable — all valid normalizations are handled above
-    raise ValueError(f"Unhandled normalization: '{normalization}'")
+    total = sum(composition.values())
+    if total == 0:
+        return dict(composition)
+    return {k: target * v / total for k, v in composition.items()}

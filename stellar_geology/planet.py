@@ -9,7 +9,6 @@ from typing import Any, TYPE_CHECKING
 
 from . import conversions as conv
 from . import constants as const
-import warnings as w
 
 if TYPE_CHECKING:
     from .star import Star
@@ -102,7 +101,7 @@ class Planet(object):
         self._alphas = alphas
         self._name = name
         self._mass = mass
-        
+
     @property
     def bulk_planet(self) -> dict[str, float] | None:
         """dict[str, float] or None : Bulk planet composition in wt% oxides.
@@ -113,22 +112,10 @@ class Planet(object):
         if self._bulk_planet is not None:
             return self._bulk_planet
         if self._stellar_dex is not None:
-            self._bulk_planet = conv.calculate_bulk_planet_from_dex(self._stellar_dex)
-            return self._bulk_planet
+            return conv.calculate_bulk_planet_from_dex(self._stellar_dex)
         if self._bulk_silicate_planet is not None and self._alphas is not None:
-            self._bulk_planet = self._calculate_bulk_from_silicate(
+            return self._calculate_bulk_from_silicate(
                 bulk_silicate_planet=self._bulk_silicate_planet, alphas=self._alphas)
-            return self._bulk_planet
-        # Explain what's missing
-        if self._bulk_silicate_planet is not None and self._alphas is None:
-            w.warn("bulk_planet cannot be computed: "
-                   "bulk_silicate_planet was provided but alphas is missing.",
-                   category=UserWarning)
-        else:
-            w.warn("bulk_planet is not set and cannot be computed. "
-                   "Pass bulk_planet, stellar_dex, or "
-                   "(bulk_silicate_planet + alphas).",
-                   category=UserWarning)
         return None
 
     @property
@@ -142,18 +129,8 @@ class Planet(object):
             return self._bulk_silicate_planet
         bulk = self.bulk_planet
         if bulk is not None and self._alphas is not None:
-            self._bulk_silicate_planet = self._calculate_silicate_from_bulk(
+            return self._calculate_silicate_from_bulk(
                 bulk_planet=bulk, alphas=self._alphas)
-            return self._bulk_silicate_planet
-        # Explain what's missing
-        if bulk is not None and self._alphas is None:
-            w.warn("bulk_silicate_planet cannot be computed: "
-                   "bulk_planet was provided but alphas is missing.",
-                   category=UserWarning)
-        else:
-            w.warn("bulk_silicate_planet is not set and cannot be computed. "
-                   "Pass bulk_silicate_planet, or (bulk_planet + alphas).",
-                   category=UserWarning)
         return None
 
     @property
@@ -166,12 +143,7 @@ class Planet(object):
             return self._stellar_dex
         bulk = self.bulk_planet
         if bulk is not None:
-            self._stellar_dex = conv.calculate_dex_from_bulk_planet(bulk)
-            return self._stellar_dex
-        w.warn("stellar_dex is not set and cannot be computed. "
-               "Pass stellar_dex, bulk_planet, or "
-               "(bulk_silicate_planet + alphas).",
-               category=UserWarning)
+            return conv.calculate_dex_from_bulk_planet(bulk)
         return None
 
     @property
@@ -186,21 +158,11 @@ class Planet(object):
         if self._bulk_planet is not None and self._bulk_silicate_planet is not None:
             bp_elements = conv.convert_composition(self._bulk_planet, 'wtpt_elements')
             bsp_elements = conv.convert_composition(self._bulk_silicate_planet, 'wtpt_elements')
-            self._alphas = {}
-            for el in bp_elements:
-                if bp_elements[el] > 0 and el in bsp_elements:
-                    self._alphas[el] = bsp_elements[el] / bp_elements[el]
-            return self._alphas
-        # Explain what's missing
-        missing = []
-        if self._bulk_planet is None:
-            missing.append("bulk_planet")
-        if self._bulk_silicate_planet is None:
-            missing.append("bulk_silicate_planet")
-        w.warn(f"alphas cannot be computed: "
-               f"{' and '.join(missing)} missing. Pass alphas directly, "
-               f"or provide both bulk_planet and bulk_silicate_planet.",
-               category=UserWarning)
+            return {
+                el: bsp_elements[el] / bp_elements[el]
+                for el in bp_elements
+                if bp_elements[el] > 0 and el in bsp_elements
+            }
         return None
     
     @property
@@ -229,11 +191,33 @@ class Planet(object):
         """
         return cls(stellar_dex=star.stellar_dex, **kwargs)
 
-    def get_composition(self, which: str, units: str = 'wtpt_oxides',
-                        normalization: str | None = None) -> dict[str, float] | None:
+    def set_alphas(self, alphas: dict[str, float] | None) -> None:
+        """Update the mantle-core partitioning coefficients ``alphas``.
+
+        Parameters
+        ----------
+        alphas : dict[str, float] or None
+            Mantle-core partitioning coefficients, or ``None`` to clear.
+
+        Examples
+        --------
+        Calculate bulk silicate planet compositions across a range of alpha values:
+
+        >>> p = Planet.from_star(star, alphas={'Fe': 0.49, 'Ni': 0.49})
+        >>> bsps = {}
+        >>> for alpha_fe in (0.30, 0.40, 0.49, 0.55):
+        ...     p.set_alphas({'Fe': alpha_fe, 'Ni': 0.49})
+        ...     bsps[alpha_fe] = p.bulk_silicate_planet
         """
-        Return the planet's composition in the requested units with optional
-        normalization.
+        self._alphas = alphas
+
+    def get_composition(self, which: str, units: str = 'wtpt_oxides') -> dict[str, float]:
+        """
+        Return the planet's composition in the requested units.
+
+        Output dicts always sum to the target for the requested units —
+        100 for percent units (``wtpt_*``, ``molpt_*``) and 1.0 for
+        fraction units (``wtfrac_*``, ``molfrac_*``).
 
         Parameters
         ----------
@@ -243,19 +227,23 @@ class Planet(object):
             One of 'wtpt_oxides', 'wtpt_elements', 'wtfrac_oxides',
             'wtfrac_elements', 'molfrac_oxides', 'molfrac_elements',
             'molfrac_singleO', 'molpt_oxides', 'molpt_elements'.
-        normalization : str or None
-            One of None, 'none', 'standard', 'fixedvolatiles',
-            'additionalvolatiles'.
 
         Returns
         -------
-        dict[str, float] or None
-            Composition in the requested units, or None if the base composition
-            is not available.
+        dict[str, float]
+            Composition in the requested units.
+
+        Raises
+        ------
+        ValueError
+            If ``which`` or ``units`` is invalid, or if the requested
+            composition cannot be computed from the inputs provided to the
+            Planet (e.g. ``bulk_silicate_planet`` was requested but no
+            ``alphas`` were provided).
 
         Notes
         -----
-        Planet element outputs do NOT include volatile elements (C, O, S).
+        Planet element outputs do not include volatile elements (C, O, S).
         We assume volatiles are mostly lost during planet formation. Element
         conversions go through the oxide-based converter, which only includes
         non-volatile rock-forming elements.
@@ -269,19 +257,36 @@ class Planet(object):
 
         if which == 'bulk_planet':
             base_composition = self.bulk_planet
-        elif which == 'bulk_silicate_planet':
+        else:
             base_composition = self.bulk_silicate_planet
 
         if base_composition is None:
-            return None
+            raise ValueError(self._diagnose_missing_inputs(which))
 
-        result = conv.convert_composition(base_composition, units)
+        return conv.convert_composition(base_composition, units)
 
-        if normalization is not None and normalization != 'none':
-            if units != 'molfrac_singleO':
-                result = conv.normalize_composition(result, normalization, units)
-
-        return result
+    def _diagnose_missing_inputs(self, which: str) -> str:
+        """Build a human-readable explanation of why ``which`` cannot be
+        computed from the current inputs. Used by :meth:`get_composition`
+        to produce a clear ValueError message."""
+        alpha_hint = ("Supply alphas via Planet(..., alphas=...), "
+                      "Planet.from_star(star, alphas=...), or "
+                      "planet.set_alphas(...).")
+        if which == 'bulk_planet':
+            if self._bulk_silicate_planet is not None and self._alphas is None:
+                return ("bulk_planet cannot be computed: bulk_silicate_planet "
+                        f"was provided but alphas is missing. {alpha_hint}")
+            return ("bulk_planet is not set and cannot be computed. "
+                    "Pass bulk_planet, stellar_dex, or "
+                    "(bulk_silicate_planet + alphas) at construction.")
+        # which == 'bulk_silicate_planet'
+        bp_available = (self._bulk_planet is not None
+                        or self._stellar_dex is not None)
+        if bp_available and self._alphas is None:
+            return ("bulk_silicate_planet cannot be computed: bulk_planet "
+                    f"was provided but alphas is missing. {alpha_hint}")
+        return ("bulk_silicate_planet is not set and cannot be computed. "
+                "Pass bulk_silicate_planet, or (bulk_planet + alphas).")
 
     #--- CALCULATIONS BETWEEN BULK PLANET AND BULK SILICATE PLANET ---#
     def _calculate_silicate_from_bulk(self, bulk_planet: dict[str, float],
@@ -318,19 +323,12 @@ class Planet(object):
         if "FeO" not in list(bulk_planet.keys()):
             raise ValueError("Bulk planet composition must have FeO concentration.")
 
-        if self._bulk_silicate_planet is not None:
-            w.warn("Warning: this Planet's bulk_silicate_planet composition "
-                   "will be overwritten.", category=UserWarning)
-
-        # Translate bulk_planet to wt% element basis
+        # Translate bulk_planet to wt% element basis. Reachable only via the
+        # bulk_silicate_planet property after it has confirmed bulk_planet is
+        # available, so this call is guaranteed to succeed.
         bulk_wtpt_elements = self.get_composition(
             which="bulk_planet", units="wtpt_elements"
         )
-        if bulk_wtpt_elements is None:
-            raise ValueError(
-                "Could not compute bulk planet element composition. "
-                "Ensure bulk_planet is set before calculating silicate."
-            )
 
         # Validate alpha values
         for k, v in alphas.items():
@@ -364,10 +362,7 @@ class Planet(object):
                 bsp_elements[k] = remaining_mass * v / sum_lithophile_bp
 
         # 5. Convert BSP element wt% → wt% oxides (normalizes to 100).
-        self._bulk_silicate_planet = conv.convert_to_wtpt_oxides(
-            bsp_elements, "wtpt_elements"
-        )
-        return self._bulk_silicate_planet
+        return conv.convert_to_wtpt_oxides(bsp_elements, "wtpt_elements")
 
     def _calculate_bulk_from_silicate(self, bulk_silicate_planet: dict[str, float],
                                       alphas: dict[str, float]) -> dict[str, float]:
