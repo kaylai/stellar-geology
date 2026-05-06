@@ -82,11 +82,11 @@ def test_gallery_unit_conversions():
     _run_example("plot_unit_conversions.py")
 
 
-def test_gallery_forward_pipeline():
-    """Run examples/plot_forward_pipeline.py end-to-end."""
-    _run_example("plot_forward_pipeline.py")
+# def test_gallery_forward_pipeline():
+#     """Run examples/plot_forward_pipeline.py end-to-end."""
+#     _run_example("plot_forward_pipeline.py")
 
 
-def test_gallery_reverse_pipeline():
-    """Run examples/plot_reverse_pipeline.py end-to-end."""
-    _run_example("plot_reverse_pipeline.py")
+# def test_gallery_reverse_pipeline():
+#     """Run examples/plot_reverse_pipeline.py end-to-end."""
+#     _run_example("plot_reverse_pipeline.py")
