@@ -18,6 +18,7 @@ cationMass = {
     'Ca': 40.078,
     'Na': 22.98977,
     'K' : 39.098,
+    'P' : 30.974,
     'C' :  12.0107,
     'O' :  15.9994,
     'S' :  32.065,
@@ -35,6 +36,7 @@ oxideMass = { # volatile-free
     'CaO'  : 56.077,
     'Na2O' : 61.9785386,
     'K2O'  : 94.195,
+    'P2O5' : 141.943,
 }
 
 oxides_to_elements = { # volatile-free
@@ -49,6 +51,7 @@ oxides_to_elements = { # volatile-free
     'CaO'  : 'Ca',
     'Na2O' : 'Na',
     'K2O'  : 'K',
+    'P2O5' : 'P',
 }
 
 elements_to_oxides = {v: k for k, v in oxides_to_elements.items()}
@@ -65,17 +68,18 @@ A_El = {
     'Ca': 6.34,
     'Na': 6.3,
     'K' : 0.0, # I don't know what A_El is yet... see P&R spreadsheets
+    'P' : 0.0, # I don't know what A_El is yet... see P&R spreadsheets
     'C' :  8.39,
     'O' :  8.73,
     'S' :  7.16,
 }
 
 CationNum = {'SiO2': 1, 'MgO': 1, 'FeO': 1, 'CaO': 1, 'Al2O3': 2, 'Na2O': 2,
-             'K2O': 2, 'MnO': 1, 'TiO2': 1, 'P2O5': 2, 'Cr2O3': 2,
+             'K2O': 2, 'P2O5': 2, 'MnO': 1, 'TiO2': 1, 'P2O5': 2, 'Cr2O3': 2,
              'NiO': 1, 'CoO': 1, 'Fe2O3': 2, 'H2O': 2, 'CO2': 1, 'F2O': 2}
 
 OxygenNum = {'SiO2': 2, 'MgO': 1, 'FeO': 1, 'CaO': 1, 'Al2O3': 3, 'Na2O': 1,
-             'K2O': 1, 'MnO': 1, 'TiO2': 2, 'P2O5': 5, 'Cr2O3': 3,
+             'K2O': 1, 'P2O5': 5, 'MnO': 1, 'TiO2': 2, 'P2O5': 5, 'Cr2O3': 3,
              'NiO': 1, 'CoO': 1, 'Fe2O3': 3, 'H2O': 1, 'CO2': 2, 'F2O': 1}
 
 _composition_keys = set(elements_to_oxides) | set(oxides_to_elements)

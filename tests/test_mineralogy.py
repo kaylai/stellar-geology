@@ -8,6 +8,9 @@ from stellar_geology import constants as const
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
+XTAL_OXIDES = ["SiO2", "Al2O3", "FeO", "MgO", "CaO"]
+
+# For Putirka and Rarick 2019
 BULK_PLANET_OXIDES = {
     'SiO2':  45.0623584204862,
     'TiO2':  0.1692846252333,
@@ -35,14 +38,96 @@ EXPECTED_MINERALOGY = {
         "garnet": 0.026272795,
     }
 
-XTAL_OXIDES = ["SiO2", "Al2O3", "FeO", "MgO", "CaO"]
-
-##TODO tests for instantiation of the class
-
-def test_calculate_mineralogy():
+def test_calculate_mineralogy_Putirka():
     # BSP of C #5 Ringwood from Putirka and Rarick (2019) supplemental spreadsheet 2.
     assert calculate_mineralogy(silicate_composition=BULK_PLANET_OXIDES) == pytest.approx(
         EXPECTED_MINERALOGY, rel=1e-4)
+
+# For Till et al. 2012 JGR
+# Composition of B1204 (Till et al. 2012 JGR) in Christy Till's spreadsheet 
+# "Plag_Lherz_Regression_v6_Final(in_paper).xlsx" in tab "Plag Lherz All Data"
+MANTLE_COMPOSITION_TILL_PLAG = {
+    'SiO2':  51.63954907,
+    'TiO2':  1.978678745,
+    'Al2O3': 17.29911673,
+    'FeO':   8.895240639,
+    'MnO':   0.155815443,
+    'MgO':   6.236804218,
+    'CaO':   8.788374359,
+    'Na2O':  3.987103774,
+    'K2O' :  1.005126937,
+    'Cr2O3': 0.014278216,
+}
+
+PRESSURE_PLAG = 0.8 # GPa
+
+EXPECTED_MIN_TILL_PLAG = {
+    "quartz": 0.000120083399358276,
+    "plagioclase": 0.702643038236381,
+    "olivine": 0.161793338435394,
+    "clinopyroxene": 0.146425441044163,
+}
+
+REYKJANES_TILL_PLAG = {
+    'SiO2':  48.84,
+    'TiO2':  0.74,
+    'Al2O3': 17.60,
+    'FeO':  7.58,
+    'MgO':  11.49,
+    'CaO':  12.03,
+    'Na2O': 1.68,
+    'K2O' : 0.05,
+}
+
+PRESSURE_REYKJANES = 0.68
+
+EXPECTED_MIN_REYKJANES = {
+    "quartz": 0.044,
+    "plagioclase": 0.578,
+    "olivine": 0.226,
+    "clinopyroxene": 0.152,
+}
+
+# Compositoin of INT-A3 (Schwab, B.E., Johnston, A.D., 2001) in Christy Till's spreadsheet 
+# "Sp_Lherz_Regression_Final(in_paper).xlsx" in tab "Sp Lherz All Data"
+MANTLE_COMPOSITION_TILL_SP = {
+    'SiO2':  50.68,
+    'TiO2':  0.15,
+    'Al2O3': 12.27,
+    'FeO':   6.49,
+    'MnO':   0.12,
+    'MgO':   15.03,
+    'CaO':   13.65,
+    'Na2O':  0.62,
+    'K2O' :  0.17,
+    'P2O5':  0.0,
+    'Cr2O3': 1.06,
+    'NiO':   0.0,
+}
+
+PRESSURE_SP = 1 # GPa
+
+EXPECTED_MIN_TILL_SP = {
+    "quartz": 0.0896091708197259,
+    "plagioclase": 0.375885611588421,
+    "olivine": 0.238692442363366,
+    "clinopyroxene": 0.295812775228487,
+}
+
+
+##TODO tests for instantiation of the class
+
+
+
+def test_calculate_mineralogy_Till_plag():
+    assert calculate_mineralogy(silicate_composition=MANTLE_COMPOSITION_TILL_PLAG,
+                                pressure = PRESSURE_PLAG, model="Till2012_plag") == pytest.approx(
+                                    EXPECTED_MIN_TILL_PLAG, rel=1e-4)
+
+def test_calculate_mineralogy_Till_spin():
+    assert calculate_mineralogy(silicate_composition=MANTLE_COMPOSITION_TILL_SP,
+                                pressure = PRESSURE_SP, model="Till2012_sp") == pytest.approx(
+                                    EXPECTED_MIN_TILL_SP, rel=1e-4)
 
 # TEST INTERMEDIATE CALCS FOR CALCULATION OF MINERALOGY
 

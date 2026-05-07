@@ -19,6 +19,7 @@ __all__ = [
     'mol_cations_to_wtpt_oxides',
     'mol_oxides_to_mol_cations',
     'mol_cations_to_mol_oxides',
+    'calculate_mg_number',
 ]
 
 def calculate_bulk_planet_from_dex(stellar_dex: dict[str, float]) -> dict[str, float]:
@@ -770,3 +771,24 @@ def normalize_composition(composition: dict[str, float], units: str) -> dict[str
     if total == 0:
         return dict(composition)
     return {k: target * v / total for k, v in composition.items()}
+
+
+def calculate_mg_number(composition: dict[str, float], units="wtpt_oxides") -> float:
+    """
+    Takes in wt% oxides, calculates molar Mg# = MgO/(MgO+FeO)
+
+    Parameters
+    ----------
+    composition: dict[str, float]
+        Silicate composition. Only wtpt_oxides is currently supported.
+
+    units: str
+        Units of input composition. Only wtpt_oxides is currently supported.
+    """
+    if units != "wtpt_oxides":
+        raise ValueError("Only wtpt_oxides is currently implemented for units of input composition.")
+
+    MgO_molar = composition['MgO'] / const.oxideMass['MgO']
+    FeO_molar = composition['FeO'] / const.oxideMass['FeO']
+
+    return MgO_molar / (MgO_molar + FeO_molar)
