@@ -1,7 +1,8 @@
 Stellar Geology
 ===============
 
-[![Documentation Status](https://readthedocs.org/projects/stellar-geology/badge/?version=latest)](https://stellar-geology.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/stellar-geology/badge/?version=latest)](https://stellar-geology.readthedocs.io/en/latest/?badge=latest) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20492497.svg)](https://doi.org/10.5281/zenodo.20492497)
+
 
 A python library for calculating planet geochemistry from stellar compositions.
 
