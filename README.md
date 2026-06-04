@@ -22,3 +22,10 @@ bsp = bsp.get_composition("bulk_silicate_planet", units="wtpt_oxides")
 # calculate its mineralogy
 mineralogy = sg.calculate_mineralogy(bsp)
 ```
+
+## Installation
+stellar_geology is not yet on PyPI, but you can pip install by git cloning or via the following:
+
+```bash
+pip install git+https://github.com/kaylai/stellar_geology.git
+```

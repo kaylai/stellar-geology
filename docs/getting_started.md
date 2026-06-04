@@ -2,7 +2,13 @@
 
 ## Installation
 
-Install from source:
+stellar_geology is not currently on PyPI, but you can pip install it via:
+
+```bash
+pip install git+https://github.com/kaylai/stellar_geology.git
+```
+
+Or, install from source (add the `-e` flag after `pip install .` to install editable):
 
 ```bash
 git clone https://github.com/kaylai/stellar-geology.git
