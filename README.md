@@ -27,5 +27,5 @@ mineralogy = sg.calculate_mineralogy(bsp)
 stellar_geology is not yet on PyPI, but you can pip install by git cloning or via the following:
 
 ```bash
-pip install git+https://github.com/kaylai/stellar_geology.git
+pip install git+https://github.com/kaylai/stellar-geology.git
 ```
