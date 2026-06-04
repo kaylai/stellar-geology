@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 authors = [
-    { name = "Kayla Iacovino", email = "kaylaiacovino@gmail.com" },
+    { name = "Kayla Iacovino", email = "kaylaiacovino@protonmail.com" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
