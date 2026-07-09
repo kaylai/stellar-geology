@@ -12,6 +12,7 @@ The core workflow: create a star from spectroscopic dex measurements, view its c
 
 import matplotlib.pyplot as plt
 import stellar_geology as sg
+import pandas as pd
 
 star = sg.Star(
     stellar_dex={"Fe": 0.1, "Mg": -0.05, "Si": -0.05},
@@ -71,3 +72,20 @@ ax.pie(
 )
 ax.set_title("Mantle Mineralogy\n(CIPW normative, molar fractions)", fontweight="bold")
 plt.show()
+
+# %%
+# make mineralogy dict into a DataFrame
+mineralogy_df = pd.DataFrame([mineralogy])
+
+# create a plot with stellar_geology's ternary plotting tool
+fig = sg.ternary_plot(
+    mineralogy_df,
+    a="olivine",
+    b="orthopyroxene",
+    c="clinopyroxene",
+    name="My mantle mineralogy",
+    title="Mantle Mineralogy (CIPW normative, molar fractions)",
+    base_marker=dict(size=20)
+    )
+
+fig
