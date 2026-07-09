@@ -29,7 +29,19 @@ DEFAULT_OVERLAY_MARKER = dict(
     size=8, color="red", symbol="circle"
 )
 
-DEFAULT_AXIS_STYLE: dict[str, Any] = {}
+DEFAULT_AXIS_STYLE  = dict(
+    color="black",
+    gridcolor="black",
+    linecolor="black",
+    linewidth=1,
+    )
+
+DEFAULT_LAYOUT = dict(
+    paper_bgcolor="rgba(0, 0, 0, 0)",
+    font=dict(size=18),
+    width=900,
+    height=800,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -146,14 +158,12 @@ def ternary_plot(
         a: str,
         b: str,
         c: str,
-        title: str,
-        name: str = "Data",
+        name: str | None = None,
         base_marker: dict | None = None,
         axis_style: dict | None = None,
         overlay: OverlayConfig | None = None,
         aaxis_min: float | None = None,
-        width: int = 900,
-        height: int = 800,
+        **layout_kwargs: Any,
 ) -> go.Figure:
     """
     Create a ternary scatter plot, optionally overlaying additional data.
@@ -168,8 +178,6 @@ def ternary_plot(
         Column name for the left axis component.
     c : str
         Column name for the right axis component.
-    title : str
-        Plot title.
     name : str, optional
         Legend label for the primary dataset trace. Default is ``"Data"``.
     base_marker : dict, optional
@@ -177,20 +185,41 @@ def ternary_plot(
         small black circle with a black outline.
     axis_style : dict, optional
         Plotly axis formatting kwargs unpacked into each ternary axis (e.g.
-        tickfont, gridcolor). If None, no additional styling is applied.
+        tickfont, gridcolor). If None, default styling is applied.
     overlay : OverlayConfig, optional
         Overlay configuration. If None, no overlay is drawn.
     aaxis_min : float, optional
         Minimum value for the a-axis. If None, Plotly uses its default.
-    width : int, optional
-        Figure width in pixels. Default is 900.
-    height : int, optional
-        Figure height in pixels. Default is 800.
+    **layout_kwargs
+        Any Plotly layout property, forwarded to ``fig.update_layout()``
+        after the defaults in ``DEFAULT_LAYOUT`` are applied (transparent
+        background, font size 18, 900x800 figure), so user values win.
+        See https://plotly.com/python/reference/layout/ for all options.
+        Plotly's magic-underscore shorthand works (e.g. ``font_family``).
 
     Returns
     -------
     fig : go.Figure
         The constructed ternary scatter figure.
+
+    Examples
+    --------
+    Commonly used layout kwargs:
+
+    >>> fig = ternary_plot(
+    ...     df, "Mg", "Si", "Fe",
+    ...     title="Planet compositions",
+    ...     width=700,
+    ...     height=600,
+    ...     paper_bgcolor="white",
+    ...     font_size=14,
+    ...     showlegend=False,
+    ...     legend_title_text="Dataset",
+    ... )
+    
+    You can also pass fig.update_layout:
+    
+    >>> fig.update_layout(ternary=dict(bgcolor="#676767"))
 
     Raises
     ------
@@ -209,7 +238,7 @@ def ternary_plot(
     if axis_style is None:
         axis_style = DEFAULT_AXIS_STYLE
 
-    fig = px.scatter_ternary(df, a=a, b=b, c=c, title=title)
+    fig = px.scatter_ternary(df, a=a, b=b, c=c)
     fig.update_traces(
         marker=base_marker,
         name=name,
@@ -225,8 +254,6 @@ def ternary_plot(
         axis_kwargs["aaxis_min"] = aaxis_min
 
     fig.update_layout(
-        width=width,
-        height=height,
         ternary=dict(
             sum=100,
             aaxis=dict(title=a, **axis_style),
@@ -235,7 +262,10 @@ def ternary_plot(
             bgcolor="#F8F8F8",
             **axis_kwargs,
         ),
+        **DEFAULT_LAYOUT,
     )
+    # Applied second so user kwargs deep-merge over the defaults
+    fig.update_layout(**layout_kwargs)
     return fig
 
 

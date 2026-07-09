@@ -11,7 +11,7 @@ from .star import Star
 from .planet import Planet
 from .constants import *
 from .mineralogy import calculate_mineralogy, calculate_composition_from_mineralogy, plot_norm
-from .plot import *
+from .plot import ternary_plot
 
 __all__ = [
     # Classes

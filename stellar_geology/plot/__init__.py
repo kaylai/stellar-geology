@@ -6,8 +6,9 @@ Functions for creating ternary and other useful plots related to stellar geology
 This is a stub.
 """
 
-from ternary_plot import *
+from .ternary_plot import *
 
 __all__ = [
     'ternary_plot',
+    'FigureExporter'
 ]
