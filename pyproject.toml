@@ -45,6 +45,9 @@ dev = [
     "matplotlib",
     "pymupdf",
     "kaleido",
+    # for scripts/check_release.sh (local release dry-run)
+    "build",
+    "twine",
 ]
 
 [tool.mypy]
