@@ -154,7 +154,7 @@ class FigureExporter:
 # ---------------------------------------------------------------------------
 
 def ternary_plot(
-        df: pd.DataFrame,
+        df: pd.DataFrame | dict,
         a: str,
         b: str,
         c: str,
@@ -170,8 +170,10 @@ def ternary_plot(
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Primary dataset to plot.
+    df : pd.DataFrame or dict
+        Primary dataset to plot. A dict may map column names to lists
+        (multiple points) or to scalars (a single point), e.g.
+        ``{'Mg': 30, 'Si': 40, 'Fe': 30}``.
     a : str
         Column name for the top axis component.
     b : str
@@ -226,6 +228,13 @@ def ternary_plot(
     ValueError
         If `a`, `b`, or `c` are not columns in `df`.
     """
+    if isinstance(df, dict):
+        try:
+            df = pd.DataFrame(df)
+        except ValueError:
+            # dict of all scalars (a single point) needs an explicit index
+            df = pd.DataFrame(df, index=[0])
+
     for col in (a, b, c):
         if col not in df.columns:
             raise ValueError(

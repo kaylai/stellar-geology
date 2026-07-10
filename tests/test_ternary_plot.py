@@ -42,6 +42,16 @@ def test_layout_kwargs_override_defaults():
     assert fig.layout.font.size == DEFAULT_LAYOUT['font']['size']
 
 
+def test_accepts_dict_of_lists():
+    fig = ternary_plot(DF.to_dict('list'), 'Mg', 'Si', 'Fe')
+    assert list(fig.data[0].a) == list(DF['Mg'])
+
+
+def test_accepts_dict_of_scalars():
+    fig = ternary_plot({'Mg': 30, 'Si': 40, 'Fe': 30}, 'Mg', 'Si', 'Fe')
+    assert list(fig.data[0].a) == [30]
+
+
 def test_missing_column_raises():
     with pytest.raises(ValueError, match="not found in df"):
         ternary_plot(DF, 'Mg', 'Si', 'Xx')
