@@ -34,5 +34,8 @@ echo "# 1. bump the version in pyproject.toml and CITATION.cff, then:
 # 3. push commit and tag together
     git push --follow-tags
 
-# 4. GitHub Actions publishes to PyPI every release automatically"
+# 4. create release
+    gh release create v0.1.0 --generate-notes
+
+# 5. GitHub Actions publishes to PyPI every release automatically"
 echo
