@@ -33,7 +33,10 @@ docs = [
     "sphinx-gallery",
     "myst-parser",
     "matplotlib",
-    "plotly",
+    # capped: plotly 6.9.0 embeds reference plotly.js 3.7.0, which
+    # cdn.plot.ly returns 403 for — interactive gallery plots go blank.
+    # Lift the cap once the CDN serves it (or a fixed plotly ships).
+    "plotly<6.9",
 ]
 
 dev = [
