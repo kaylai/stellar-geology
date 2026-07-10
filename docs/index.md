@@ -33,6 +33,7 @@ getting_started
 :hidden:
 
 auto_examples/index
+contributing_examples
 ```
 
 ```{toctree}

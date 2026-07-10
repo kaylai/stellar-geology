@@ -11,6 +11,7 @@ from .star import Star
 from .planet import Planet
 from .constants import *
 from .mineralogy import calculate_mineralogy, calculate_composition_from_mineralogy, plot_norm
+from .plot import ternary_plot
 
 __all__ = [
     # Classes
@@ -24,4 +25,6 @@ __all__ = [
     # Constants
     'oxides_to_elements',
     'elements_to_oxides',
+    # Utils
+    'ternary_plot',
 ]
