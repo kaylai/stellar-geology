@@ -4,6 +4,7 @@ Create a Planet from a Star
 
 The core workflow: create a star from spectroscopic dex measurements, calculate a derivative bulk silicate planet composition, and visualize its chemistry.
 """
+# sphinx_gallery_thumbnail_path = '_static/ternary_thumb.png'
 
 # %%
 # Create a Star
