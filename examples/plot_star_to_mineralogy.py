@@ -1,6 +1,6 @@
 """
 Star to Mineralogy Pipeline
-============================
+===========================
 
 The core workflow: create a star from spectroscopic dex measurements, view its composition, and calculate mantle mineralogy from a bulk silicate planet composition.
 """
@@ -74,18 +74,20 @@ ax.set_title("Mantle Mineralogy\n(CIPW normative, molar fractions)", fontweight=
 plt.show()
 
 # %%
-# make mineralogy dict into a DataFrame
-mineralogy_df = pd.DataFrame([mineralogy])
 
 # create a plot with stellar_geology's ternary plotting tool
 fig = sg.ternary_plot(
-    mineralogy_df,
+    mineralogy,
     a="olivine",
     b="orthopyroxene",
     c="clinopyroxene",
-    name="My mantle mineralogy",
+    name="My mantle",
+    width=800,
     title="Mantle Mineralogy (CIPW normative, molar fractions)",
-    base_marker=dict(size=20)
+    base_marker=dict(size=20),
+    font=dict(size=15)
     )
 
 fig
+
+# %%
