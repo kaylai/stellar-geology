@@ -5,6 +5,6 @@ authors:
   given-names: "Kayla"
   orcid: "https://orcid.org/0000-0002-2461-7748"
 title: "stellar-geology"
-version: 0.0.1
-date-released: 2026-06-01
+version: 0.1.0
+date-released: 2026-07-09
 url: "https://github.com/kaylai/stellar-geology"
