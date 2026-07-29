@@ -25,6 +25,7 @@ mineralogy = sg.calculate_mineralogy(bsp)
 :hidden:
 
 getting_started
+definitions
 ```
 
 ```{toctree}
