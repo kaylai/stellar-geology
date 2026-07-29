@@ -332,9 +332,9 @@ class Planet(object):
 
         # Validate alpha values
         for k, v in alphas.items():
-            if v <= 0 or v >= 1:
+            if v <= 0 or v > 1:
                 raise ValueError(
-                    f"{k} alpha value must be a float where 0 < alpha < 1"
+                    f"{k} alpha value must be a float where 0 < alpha <= 1"
                 )
 
         # --- Putirka & Rarick (2019) algorithm ---
