@@ -309,10 +309,10 @@ class Planet(object):
             Bulk planet composition in wt% oxides. Must contain value for FeO.
         alphas:    dict[str, float]
                 Ratio of element in the bulk silicate planet and bulk planet, defined
-                in Putirka and Rarick (2019): e.g., alphas = FeBSP/FeBP. Will always
-                be a positive fraction <1. Used for defining which elements partition
-                into a metallic core. Commonly, Fe, Si, and Ni. Fe is required when
-                passing this argument: {'Fe': 0.49}.
+                in Putirka and Rarick (2019): e.g., alphas = FeBSP/FeBP on a cation wt%
+                basis. Alpha will always be a positive fraction <1. Used for defining
+                which elements partition into a metallic core. Commonly, Fe, Si, and Ni.
+                Fe is required when passing this argument: {'Fe': 0.49}.
 
         Returns
         -------
