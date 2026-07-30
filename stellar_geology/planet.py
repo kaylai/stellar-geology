@@ -179,14 +179,14 @@ class Planet(object):
             # if any computed alphas are >1 it is an artifact of normalization and indicates
             # that those alpha values were =1 or never set. If any computed alphas are 0 it's
             # because the star or planet comp has a 0 value for that element - rm from alpha dict
-            ltoezero_keys = []
+            keys_to_remove = []
             for k in calculated_alphas.keys():
                 if calculated_alphas[k] <= 0:
-                    ltoezero_keys.append(k)
+                    keys_to_remove.append(k)
                 elif calculated_alphas[k] > 1:
-                    calculated_alphas[k] = 1
+                    keys_to_remove.append(k)
             # now rm keys <=0 from alphas dict
-            for z in ltoezero_keys:
+            for z in keys_to_remove:
                 calculated_alphas.pop(z)
             const.check_alphas(calculated_alphas)
             return calculated_alphas

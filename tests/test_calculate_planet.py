@@ -118,8 +118,8 @@ def test_alphas_from_bulk_and_bsp():
     p_rev = Planet(bulk_planet=BULK_PLANET, bulk_silicate_planet=bsp)
     computed_alphas = p_rev.alphas
 
-    for k, v in ALPHAS.items():
-        assert v == pytest.approx(computed_alphas[k], rel=1e-6)
+    for k, v in computed_alphas.items():
+        assert v == pytest.approx(ALPHAS[k], rel=1e-6)
 
 def test_all_alphas_used():
     """Ensure that any values in the alphas dict are not ignored."""
