@@ -19,9 +19,9 @@ cationMass = {
     'Na': 22.98977,
     'K' : 39.098,
     'P' : 30.974,
-    'C' :  12.0107,
-    'O' :  15.9994,
-    'S' :  32.065,
+    # 'C' :  12.0107,
+    # 'O' :  15.9994,
+    # 'S' :  32.065,
 }
 
 oxideMass = { # volatile-free
@@ -69,18 +69,18 @@ A_El = {
     'Na': 6.3,
     'K' : 0.0, # I don't know what A_El is yet... see P&R spreadsheets
     'P' : 0.0,
-    'C' :  8.39,
-    'O' :  8.73,
-    'S' :  7.16,
+    # 'C' :  8.39,
+    # 'O' :  8.73,
+    # 'S' :  7.16,
 }
 
 CationNum = {'SiO2': 1, 'MgO': 1, 'FeO': 1, 'CaO': 1, 'Al2O3': 2, 'Na2O': 2,
              'K2O': 2, 'MnO': 1, 'TiO2': 1, 'P2O5': 2, 'Cr2O3': 2,
-             'NiO': 1, 'CoO': 1, 'Fe2O3': 2, 'H2O': 2, 'CO2': 1, 'F2O': 2}
+             'NiO': 1, 'CoO': 1, 'Fe2O3': 2}
 
 OxygenNum = {'SiO2': 2, 'MgO': 1, 'FeO': 1, 'CaO': 1, 'Al2O3': 3, 'Na2O': 1,
              'K2O': 1, 'MnO': 1, 'TiO2': 2, 'P2O5': 5, 'Cr2O3': 3,
-             'NiO': 1, 'CoO': 1, 'Fe2O3': 3, 'H2O': 1, 'CO2': 2, 'F2O': 1}
+             'NiO': 1, 'CoO': 1, 'Fe2O3': 3}
 
 _composition_keys = set(elements_to_oxides) | set(oxides_to_elements)
 
@@ -100,5 +100,7 @@ def filter_compositional_keys(comp: dict[str, float],
                "parameters and will be ignored in calculations.",
                category=UserWarning)
     import math
-    return {k: (0.0 if (v is None or (isinstance(v, float) and math.isnan(v))) else v)
+    f = {k: (0.0 if (v is None or (isinstance(v, float) and math.isnan(v))) else v)
             for k, v in comp.items() if k in _composition_keys}
+    print(f)
+    return f
