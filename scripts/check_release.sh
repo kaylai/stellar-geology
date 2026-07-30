@@ -11,6 +11,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# First run tests and mypy
+pytest -vv
+mypy .
+
 rm -rf dist/
 python -m build
 twine check dist/*

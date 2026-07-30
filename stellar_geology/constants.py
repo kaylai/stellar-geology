@@ -105,7 +105,7 @@ def filter_compositional_keys(comp: dict[str, float],
     print(f)
     return f
 
-def check_alphas(alphas: dict[str, float]):
+def check_alphas(alphas: dict[str, float]) -> None:
     """Raise ValueError if any key in alphas is not a recognized element
     """
     bad_alphas = []
