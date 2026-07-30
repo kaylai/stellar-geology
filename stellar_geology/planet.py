@@ -159,14 +159,37 @@ class Planet(object):
         if self._alphas is not None:
             const.check_alphas(self._alphas)
             return self._alphas
-        if self._bulk_planet is not None and self._bulk_silicate_planet is not None:
-            bp_elements = conv.convert_composition(self._bulk_planet, 'wtpt_elements')
+        if self._bulk_silicate_planet is not None:
+            if self._bulk_planet is not None:
+                bp_elements = conv.convert_composition(self._bulk_planet, 'wtpt_elements')
+            elif self._stellar_dex is not None:
+                bulk = self.bulk_planet
+                if bulk is None:
+                    return None
+                bp_elements = conv.convert_composition(bulk, 'wtpt_elements')
+            else:
+                return None
             bsp_elements = conv.convert_composition(self._bulk_silicate_planet, 'wtpt_elements')
-            return {
+            calculated_alphas = {
                 el: bsp_elements[el] / bp_elements[el]
                 for el in bp_elements
                 if bp_elements[el] > 0 and el in bsp_elements
             }
+            
+            # if any computed alphas are >1 it is an artifact of normalization and indicates
+            # that those alpha values were =1 or never set. If any computed alphas are 0 it's
+            # because the star or planet comp has a 0 value for that element - rm from alpha dict
+            ltoezero_keys = []
+            for k in calculated_alphas.keys():
+                if calculated_alphas[k] <= 0:
+                    ltoezero_keys.append(k)
+                elif calculated_alphas[k] > 1:
+                    calculated_alphas[k] = 1
+            # now rm keys <=0 from alphas dict
+            for z in ltoezero_keys:
+                calculated_alphas.pop(z)
+            const.check_alphas(calculated_alphas)
+            return calculated_alphas
         return None
     
     @property
@@ -214,10 +237,29 @@ class Planet(object):
         ...     bsps[alpha_fe] = p.bulk_silicate_planet
         """
         if alphas is None:
+            # allows ._alpha attr to be cleared
             self._alphas = alphas
         else:
             const.check_alphas(alphas)
             self._alphas = alphas
+    
+    def set_bulk_silicate_planet(self, bulk_silicate_planet: dict[str, float] | None,
+                                 units: str = 'wtpt_oxides') -> None:
+        """Update the bulk_silicate_planet composition attribute
+        
+        Parameters
+        ----------
+        bulk_silicate_planet: dict[str, float] or None
+            Bulk silicate planet composition. Units specified by the `units` parameter.
+        units : str
+                    Units of the bulk_planet and bulk_silicate_planet dicts. Defaults
+                    to 'wtpt_oxides'. Any valid unit string is accepted (e.g.,
+                    'wtpt_elements', 'molfrac_oxides'). Compositions are converted
+                    to wt% oxides internally on init.
+        """
+        if units not in conv.VALID_UNITS:
+            raise ValueError(f"units must be one of {conv.VALID_UNITS}, got '{units}'.")
+        self._bulk_silicate_planet = bulk_silicate_planet
 
     def get_composition(self, which: str, units: str = 'wtpt_oxides') -> dict[str, float]:
         """

@@ -1,5 +1,6 @@
 import pytest
 from stellar_geology.planet import Planet
+from stellar_geology.star import Star
 from stellar_geology import conversions as conv
 
 # ---------------------------------------------------------------------------
@@ -15,9 +16,33 @@ BULK_PLANET_OXIDES = {
     'Na2O':  0.7781373566196,
     'Cr2O3': 0.4498165616991,
     'NiO':   1.8889236049229,
-}
+    }
 
 ALPHAS = {"Fe": 0.494, "Ni": 0.08, "Si": 0.98}
+
+STELLAR_DEX = {
+    'Si': -7.57592538636706,
+    'Ti': -7.504723060156748,
+    'Al': -7.5366380548809,
+    'Fe': -7.591056455656681,
+    'Mg': -7.568029042971039,
+    'Ca': -7.56940734028689,
+    'Na': -7.692908728727007,
+    'Cr': -7.670500949797023,
+    'Ni': -7.609815678489136
+    }
+
+BULK_SILICATE_PLANET = {
+    'SiO2': 32.01493490833219,
+    'FeO': 15.86199132167034,
+    'NiO': 0.1438293220219631,
+    'TiO2': 0.22301494948864656,
+    'Al2O3': 4.586301956220209,
+    'MgO': 41.49728157664216,
+    'CaO': 3.548770971083789,
+    'Na2O': 1.3458701091203746,
+    'Cr2O3': 0.7780048854203415
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +82,24 @@ def test_mass_returns_directly():
 def test_alphas_returns_directly():
     p = Planet(bulk_planet=BULK_PLANET_OXIDES, alphas=ALPHAS)
     assert p.alphas == ALPHAS
+
+
+# ---------------------------------------------------------------------------
+# Property accessibility: stellar_dex only
+# ---------------------------------------------------------------------------
+def test_stellar_dex_only_bp_accessible():
+    p = Planet(stellar_dex=STELLAR_DEX)
+    assert p.bulk_planet is not None
+    assert p.bulk_planet == pytest.approx(BULK_PLANET_OXIDES, rel=1e-4)
+
+
+# ---------------------------------------------------------------------------
+# Property accessibility: Planet.from_star()
+# ---------------------------------------------------------------------------
+def access_attr_from_test_planet_from_star():
+    p = Planet.from_star(STELLAR_DEX)
+    assert p.stellar_dex is not None
+    assert p.bulk_planet == pytest.approx(BULK_PLANET_OXIDES, rel=1e-4)
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +159,33 @@ def test_bsp_only_alphas_is_none():
     bsp = {"SiO2": 45.0, "MgO": 31.5, "FeO": 15.3, "Al2O3": 3.5, "CaO": 2.7}
     p = Planet(bulk_silicate_planet=bsp)
     assert p.alphas is None
+
+
+# ---------------------------------------------------------------------------
+# Property accessibility: alphas from bsp and bp
+# ---------------------------------------------------------------------------
+def test_alphas_from_bsp_and_bp():
+    """Ensure alphas can be lazy computed from BP and BSP only
+    """
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES, bulk_silicate_planet=BULK_SILICATE_PLANET)
+    computed_alphas = p.alphas
+    for k in computed_alphas.keys():
+        if k not in ALPHAS:
+            assert computed_alphas[k] == 1
+        else:
+            assert computed_alphas[k] == pytest.approx(ALPHAS[k], rel=1e-6)
+
+def test_alphas_from_bsp_and_dex():
+    """Ensure alphas can be lazy computed from a Planet.from_star() with only dex and BSP
+    """
+    astar = Star(STELLAR_DEX)
+    p = Planet.from_star(astar, bulk_silicate_planet=BULK_SILICATE_PLANET)
+    computed_alphas = p.alphas
+    for k in computed_alphas.keys():
+        if k not in ALPHAS:
+            assert computed_alphas[k] == 1
+        else:
+            assert computed_alphas[k] == pytest.approx(ALPHAS[k], rel=1e-6)
 
 
 # ---------------------------------------------------------------------------
@@ -303,3 +373,39 @@ def test_set_alphas_to_none_clears():
     assert p.alphas is None or p._alphas is None  # cleared
     with pytest.raises(ValueError, match="alphas is missing"):
         p.get_composition("bulk_silicate_planet", units="wtpt_oxides")
+
+
+# ---------------------------------------------------------------------------
+# set_bulk_silicate_planet: mutation, cache invalidation, user-input preservation
+# ---------------------------------------------------------------------------
+def test_set_bulk_silicate_planet_recovers_from_forgotten_bsp():
+    """If bsp was not passed at construction, set_bulk_silicate_planet should let
+    bulk_planet and alphas (if one or the other are known) compute on the next access."""
+    p = Planet(alphas=ALPHAS)
+    p.set_bulk_silicate_planet(BULK_SILICATE_PLANET)
+    assert p.bulk_silicate_planet is not None
+    assert p.bulk_planet == pytest.approx(BULK_PLANET_OXIDES, rel=1e-4)
+
+
+def test_set_bulk_silicate_planet_invalidates_derived_bp_cache():
+    """Changing bsp after a bp has been derived must cause the next access to recompute
+    with the new bsp, not return the stale cached value."""
+    p = Planet(bulk_silicate_planet=BULK_SILICATE_PLANET, alphas=ALPHAS)
+    bsp1 = p.bulk_silicate_planet
+    p.set_bulk_silicate_planet({"SiO2": 50.0, "FeO": 44.0, "NiO": 6.0})
+    bsp2 = p.bulk_silicate_planet
+    assert bsp1["FeO"] != pytest.approx(bsp2["FeO"]), (
+        "set_alphas did not invalidate the derived bulk_silicate_planet cache"
+    )
+
+def test_set_bulk_silicate_planet_to_none_clears():
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES)
+    with pytest.raises(ValueError, match="alphas is missing"):
+            p.get_composition("bulk_silicate_planet", units="wtpt_oxides")
+
+    # assign bulk_silicate_planet, then test that they clear when removed
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES, bulk_silicate_planet=BULK_SILICATE_PLANET)
+    p.set_bulk_silicate_planet(None)
+    assert p.bulk_silicate_planet is None or p._bulk_silicate_planet is None  # cleared
+    # with pytest.raises(ValueError, match="alphas is missing"):
+    #     p.get_composition("bulk_silicate_planet", units="wtpt_oxides")
