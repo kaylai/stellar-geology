@@ -15,7 +15,7 @@ cd "$(dirname "$0")/.."
 pytest -vv
 mypy .
 
-rm -rf dist/
+rm -rf dist/ build/ *.egg-info
 python -m build
 twine check dist/*
 
@@ -41,5 +41,7 @@ echo "# 1. bump the version in pyproject.toml and CITATION.cff, then:
 # 4. create release
     gh release create v0.1.0 --generate-notes
 
-# 5. GitHub Actions publishes to PyPI every release automatically"
+# 5. When checks pass on GitHub actions, manually push to PyPI
+    ensure you're in the root dir, then:
+    twine upload dist/*"
 echo
