@@ -213,8 +213,11 @@ class Planet(object):
         ...     p.set_alphas({'Fe': alpha_fe, 'Ni': 0.49})
         ...     bsps[alpha_fe] = p.bulk_silicate_planet
         """
-        const.check_alphas(alphas)
-        self._alphas = alphas
+        if alphas is None:
+            self._alphas = alphas
+        else:
+            const.check_alphas(alphas)
+            self._alphas = alphas
 
     def get_composition(self, which: str, units: str = 'wtpt_oxides') -> dict[str, float]:
         """
@@ -393,6 +396,9 @@ class Planet(object):
         dict[str, float]
             Bulk planet composition in wt% oxides.
         """
+        if alphas is None:
+            alphas = {k: 1 for k in const.cationMass.keys()}
+            
         if "Fe" not in alphas:
             raise ValueError("alphas must include 'Fe'.")
 

@@ -225,7 +225,7 @@ def test_superfluous_keys_stripped_from_stellar_dex():
 
 def test_calculate_silicate_from_bulk_noFe():
     with pytest.raises(ValueError):
-        Planet(bulk_planet={"SiO2": 45}, alphas=[]).bulk_silicate_planet
+        Planet(bulk_planet={"SiO2": 45}, alphas={}).bulk_silicate_planet
 
 # ---------------------------------------------------------------------------
 # set_alphas: mutation, cache invalidation, user-input preservation
@@ -292,7 +292,13 @@ def test_set_alphas_alpha_sweep_produces_distinct_results():
 
 
 def test_set_alphas_to_none_clears():
-    p = Planet(bulk_planet=BULK_PLANET_OXIDES, alphas={"Fe": 0.49})
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES)
+    with pytest.raises(ValueError, match="alphas is missing"):
+            p.get_composition("bulk_silicate_planet", units="wtpt_oxides")
+
+    # assign alphas, then test that they clear when removed
+    p.set_alphas({"Fe": 0.49})
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES)
     p.set_alphas(None)
     assert p.alphas is None or p._alphas is None  # cleared
     with pytest.raises(ValueError, match="alphas is missing"):

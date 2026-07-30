@@ -196,8 +196,6 @@ star_32768_dex = {
     'Ca': 0.1,
     'Na': 0.3,
     'Ni': 0.04,
-    'C' : -0.14,
-    'O' : -0.06,
 }
 
 def test_star_get_composition_wtpt_oxides():

@@ -39,8 +39,6 @@ STAR_32768_DEX = {
     'Ca': 0.1,
     'Na': 0.3,
     'Ni': 0.04,
-    'C':  -0.14,
-    'O':  -0.06,
 }
 
 # Known forward result for that star
