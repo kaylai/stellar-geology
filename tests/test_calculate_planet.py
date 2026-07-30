@@ -1,6 +1,7 @@
 import pytest
 from stellar_geology.planet import Planet
 from stellar_geology.star import Star
+from stellar_geology import constants as cnst
 
 # Tests that the math is correct
 # TODO !! add tests for intermediate calcs from stellar_dex to bulk_planet
@@ -75,29 +76,30 @@ def test_silicate_from_bulk():
     # known bulk silicate  composition of C #5 Ringwood from the Hypatia catalog
     # (Hinkel et al. 2014) as reported in Putirka and Rarick (2019)
     c5_ringwood_wtpt_oxides = {
-            'SiO2'  : 34.3228620623356,
-            'TiO2'  : 0.1289398301558,
-            'Al2O3' : 2.6516473296260,
-            'FeO'   : 33.7355431278904,
-            'MgO'   : 23.9923487223086,
-            'CaO'   : 2.0517814044420,
-            'Na2O'  : 0.7781373566196,
-            'Cr2O3' : 0.4498165616991,
-            'NiO'   : 1.8889236049229,									
-            }
+        'SiO2'  : 34.3228620623356,
+        'TiO2'  : 0.1289398301558,
+        'Al2O3' : 2.6516473296260,
+        'FeO'   : 33.7355431278904,
+        'MgO'   : 23.9923487223086,
+        'CaO'   : 2.0517814044420,
+        'Na2O'  : 0.7781373566196,
+        'Cr2O3' : 0.4498165616991,
+        'NiO'   : 1.8889236049229,									
+        }
     # alphas from Putirka and Rarick (2019) Supplementary spreadsheet 2
-    alphas = {"Fe": 0.494, "Ni": 0.08, "Si": 0.98}
+    alphas = {"Fe": 0.494, "Ni": 0.08, "Si": 0.98} 
     expected_silicate_planet = {
-        'SiO2'  : 45.0623584204862,
-        'TiO2'  : 0.1692846252333,
-        'Al2O3' : 3.4813379535577,
-        'FeO'   : 15.3424822627129,
-        'MgO'   : 31.4994657354165,
-        'CaO'   : 2.6937762031481,
-        'Na2O'  : 1.0216136521680,
-        'Cr2O3' : 0.5905624970884,
-        'NiO'   : 0.1391186501890,
-    }
+        'SiO2': 32.01493491254652,
+        'TiO2': 0.223014949769445,
+        'Al2O3': 4.586301955616539,
+        'FeO': 15.861991324141439,
+        'MgO': 41.49728157115462,
+        'CaO': 3.5487709708725936,
+        'Na2O': 1.3458701088652083,
+        'Cr2O3': 0.7780048850958857,
+        'NiO': 0.14382932193773812
+        }
+    
     p = Planet(bulk_planet=c5_ringwood_wtpt_oxides, alphas=alphas)
     # rel=1e-4 accounts for small differences in molecular weight constants
     # between our code and the Putirka & Rarick (2019) spreadsheet
@@ -112,21 +114,21 @@ def test_mantle_CIPW_norm():
 # REVERSE PIPELINE: BSP + alphas → bulk_planet
 # ============================================================================
 def test_bulk_planet_from_bsp_and_alphas():
-    """BSP + alphas should recover bulk_planet via the reverse calculation."""
+    """BSP + alphas should recover bulk_planet via the reverse calculation."""  
     c5_ringwood_wtpt_oxides = {
-        'SiO2'  : 34.3228620623356,
-        'TiO2'  : 0.1289398301558,
-        'Al2O3' : 2.6516473296260,
-        'FeO'   : 33.7355431278904,
-        'MgO'   : 23.9923487223086,
-        'CaO'   : 2.0517814044420,
-        'Na2O'  : 0.7781373566196,
-        'Cr2O3' : 0.4498165616991,
-        'NiO'   : 1.8889236049229,
+        'SiO2'  : 34.315267345094774,
+        'TiO2'  : 0.15529780644418686,
+        'Al2O3' : 2.6496934995271215,
+        'FeO'   : 33.73568069951041,
+        'MgO'   : 23.985488843225028,
+        'CaO'   : 2.0490120369450553,
+        'Na2O'  : 0.7778814840992446,
+        'Cr2O3' : 0.4443874843135551,
+        'NiO'   : 1.887290800840637,
     }
     alphas = {"Fe": 0.494, "Ni": 0.08, "Si": 0.98}
 
-    # Forward: bulk → BSP
+    # Forward: bulk to BSP
     p_fwd = Planet(bulk_planet=c5_ringwood_wtpt_oxides, alphas=alphas)
     bsp = p_fwd.bulk_silicate_planet
 
@@ -171,28 +173,77 @@ def test_stellar_dex_from_bulk_planet():
         recovered_diff = recovered_dex[el] - recovered_dex[ref]
         assert recovered_diff == pytest.approx(original_diff, abs=1e-6)
 
-
 def test_alphas_from_bulk_and_bsp():
     """Planet with both bulk and BSP should compute alphas."""
     c5_ringwood = {
-        'SiO2'  : 34.3228620623356,
-        'TiO2'  : 0.1289398301558,
-        'Al2O3' : 2.6516473296260,
-        'FeO'   : 33.7355431278904,
-        'MgO'   : 23.9923487223086,
-        'CaO'   : 2.0517814044420,
-        'Na2O'  : 0.7781373566196,
-        'Cr2O3' : 0.4498165616991,
-        'NiO'   : 1.8889236049229,
+        'SiO2'  : 34.315267345094774,
+        'TiO2'  : 0.15529780644418686,
+        'Al2O3' : 2.6496934995271215,
+        'FeO'   : 33.73568069951041,
+        'MgO'   : 23.985488843225028,
+        'CaO'   : 2.0490120369450553,
+        'Na2O'  : 0.7778814840992446,
+        'Cr2O3' : 0.4443874843135551,
+        'NiO'   : 1.887290800840637,
     }
     alphas_orig = {"Fe": 0.494, "Ni": 0.08, "Si": 0.98}
 
     p_fwd = Planet(bulk_planet=c5_ringwood, alphas=alphas_orig)
-    bsp = p_fwd.bulk_silicate_planet
+    bsp = p_fwd.get_composition(which="bulk_silicate_planet")
 
     # Create planet with both bulk and BSP, no alphas
     p_rev = Planet(bulk_planet=c5_ringwood, bulk_silicate_planet=bsp)
     computed_alphas = p_rev.alphas
 
-    assert computed_alphas["Fe"] == pytest.approx(alphas_orig["Fe"], rel=1e-4)
-    assert computed_alphas["Ni"] == pytest.approx(alphas_orig["Ni"], rel=1e-4)
+    for k, v in alphas_orig.items():
+        assert v == pytest.approx(computed_alphas[k], rel=1e-6)
+
+def test_all_alphas_used():
+    """Ensure that any values in the alphas dict are not ignored."""
+    c5_ringwood = {
+        'SiO2'  : 34.315267345094774,
+        'TiO2'  : 0.15529780644418686,
+        'Al2O3' : 2.6496934995271215,
+        'FeO'   : 33.73568069951041,
+        'MgO'   : 23.985488843225028,
+        'CaO'   : 2.0490120369450553,
+        'Na2O'  : 0.7778814840992446,
+        'Cr2O3' : 0.4443874843135551,
+        'NiO'   : 1.887290800840637,
+    }
+    
+    expected_bsp_wtpt_elements = {
+        'Si'    : 10.5829853,
+        'Ti'    : 0.09211496,
+        'Al'    : 1.85048719,
+        'Fe'    : 43.253091,
+        'Mg'    : 28.6293294,
+        'Ca'    : 3.3816251,
+        'Na'    : 1.52296733,
+        'Cr'    : 0.9027266,
+        'Ni'    : 9.78465569,   
+    }
+    
+    # create unique fake alphas for all known cations using their mass
+    set_alphas = {
+        'Si'    : 0.1,
+        'Ti'    : 0.15,
+        'Al'    : 0.2,
+        'Fe'    : 0.25,
+        'Mg'    : 0.3,
+        'Ca'    : 0.35,
+        'Na'    : 0.4,
+        'Cr'    : 0.45,
+        'Ni'    : 1,
+    }        
+    
+    p = Planet(bulk_planet=c5_ringwood, alphas=set_alphas)
+    bsp = p.get_composition(which="bulk_silicate_planet", units="wtpt_elements")
+    
+    assert bsp == pytest.approx(expected_bsp_wtpt_elements, rel=1e-4)
+    
+
+def test_bad_alpha_raises():
+    """Ensure that any key in the alphas dict that is not a known cation raises a
+    ValueError."""
+    pass

@@ -338,30 +338,28 @@ class Planet(object):
                 )
 
         # --- Putirka & Rarick (2019) algorithm ---
-        # 1. Fe and Ni BSP concentrations set directly from their alphas.
-        fe_bsp = alphas["Fe"] * bulk_wtpt_elements["Fe"]
-        ni_bsp = alphas.get("Ni", 1.0) * bulk_wtpt_elements.get("Ni", 0.0)
+        # 1. BSP concentrations set directly from their alphas.        
+        bsp_elements = {}
+        for cation in const.cationMass.keys():
+            if cation in alphas.keys():
+                bsp_conc = alphas.get(cation, 1.0) * bulk_wtpt_elements.get(cation, 0.0)
+                bsp_elements[cation] = bsp_conc
 
         # 2. Remaining mass budget for all other (lithophile) elements.
-        remaining_mass = 100.0 - fe_bsp - ni_bsp
+        remaining_mass = 100.0 - sum(bsp_elements.values())
 
-        # 3. Sum of BP element wt% for all elements except Fe and Ni.
+        # 3. Sum of BP element wt% for all elements not partitioned into core.
         sum_lithophile_bp = sum(
-            v for k, v in bulk_wtpt_elements.items() if k not in ("Fe", "Ni")
+            v for k, v in bulk_wtpt_elements.items() if k not in bsp_elements.keys()
         )
 
-        # 4. Build BSP element wt%: Fe/Ni are set directly; everything else
-        #    is rescaled proportionally to fill the remaining mass.
-        bsp_elements = {}
+        # 4. Build BSP element wt%: Any elements w/alphas are set directly; everything
+        # else is rescaled proportionally to fill the remaining mass.
         for k, v in bulk_wtpt_elements.items():
-            if k == "Fe":
-                bsp_elements[k] = fe_bsp
-            elif k == "Ni":
-                bsp_elements[k] = ni_bsp
-            else:
+            if k not in bsp_elements.keys():
                 bsp_elements[k] = remaining_mass * v / sum_lithophile_bp
 
-        # 5. Convert BSP element wt% → wt% oxides (normalizes to 100).
+        # 5. Convert BSP wt% elements to wt% oxides (normalizes to 100).
         return conv.convert_to_wtpt_oxides(bsp_elements, "wtpt_elements")
 
     def _calculate_bulk_from_silicate(self, bulk_silicate_planet: dict[str, float],
@@ -397,32 +395,31 @@ class Planet(object):
         if "Fe" not in alphas:
             raise ValueError("alphas must include 'Fe'.")
 
-        # BSP → wt% elements
+        # BSP wt% oxides to wt% elements
         bsp_elements = conv.convert_composition(bulk_silicate_planet, 'wtpt_elements')
 
-        # Reverse the alpha scaling for Fe and Ni
-        bp_fe = bsp_elements.get("Fe", 0.0) / alphas["Fe"]
-        bp_ni = bsp_elements.get("Ni", 0.0) / alphas.get("Ni", 1.0)
-
-        bsp_fe = bsp_elements.get("Fe", 0.0)
-        bsp_ni = bsp_elements.get("Ni", 0.0)
+        # Reverse the alpha scaling for any elements partitioned into core
+        bp_elements = {}
+        for cation in const.cationMass.keys():
+            if cation in alphas.keys():
+                bp_conc = bsp_elements.get(cation, 0.0) / alphas.get(cation, 1.0)
+                bp_elements[cation] = bp_conc
 
         # Reverse the lithophile rescaling
-        remaining_mass_bsp = 100.0 - bsp_fe - bsp_ni
-        remaining_mass_bp = 100.0 - bp_fe - bp_ni
+        remaining_mass  = 100.0 - sum(bp_elements.values())
+        
+        sum_siderophile_bsp = sum(
+            v for k, v in bsp_elements.items() if k not in bp_elements.keys()
+        )
 
-        if remaining_mass_bsp == 0:
-            raise ValueError("BSP has no lithophile elements (Fe + Ni = 100%).")
-
-        ratio = remaining_mass_bp / remaining_mass_bsp
-
-        bp_elements = {}
-        for el, val in bsp_elements.items():
-            if el == "Fe":
-                bp_elements[el] = bp_fe
-            elif el == "Ni":
-                bp_elements[el] = bp_ni
-            else:
-                bp_elements[el] = val * ratio
+        # if no alphas are passed or none <1, just return bulk composition
+        if remaining_mass == 0:
+            return conv.convert_to_wtpt_oxides(bp_elements, "wtpt_elements")
+        
+        # 4. Build BP element wt%: Any elements w/alphas are set directly; everything
+        # else is rescaled proportionally to fill the remaining mass.
+        for k, v in bsp_elements.items():
+            if k not in bp_elements.keys():
+                bp_elements[k] = remaining_mass * v / sum_siderophile_bsp
 
         return conv.convert_to_wtpt_oxides(bp_elements, "wtpt_elements")
