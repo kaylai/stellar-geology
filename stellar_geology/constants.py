@@ -104,3 +104,18 @@ def filter_compositional_keys(comp: dict[str, float],
             for k, v in comp.items() if k in _composition_keys}
     print(f)
     return f
+
+def check_alphas(alphas: dict[str, float]):
+    """Raise ValueError if any key in alphas is not a recognized element
+    """
+    bad_alphas = []
+    for k in alphas.keys():
+        if k not in cationMass.keys():
+            bad_alphas.append(k)
+    if len(bad_alphas) > 0:
+        raise ValueError(f"Alpha values contain unrecognized elements {bad_alphas}")
+    for k, v in alphas.items():
+        if v <= 0 or v > 1:
+            raise ValueError(
+                f"{k} alpha value must be a float where 0 < alpha <= 1"
+            )

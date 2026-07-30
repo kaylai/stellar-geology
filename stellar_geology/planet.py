@@ -88,6 +88,9 @@ class Planet(object):
             raise ValueError("Cannot pass all bulk_silicate_planet, alphas, "
                              "and stellar_dex, as values may be contradictory.")
         
+        if alphas is not None:
+            const.check_alphas(alphas)
+        
         # Convert inputs to canonical wtpt_oxides
         if bulk_planet is not None and units != 'wtpt_oxides':
             bulk_planet = conv.convert_to_wtpt_oxides(bulk_planet, units)
@@ -154,6 +157,7 @@ class Planet(object):
         not provided directly.
         """
         if self._alphas is not None:
+            const.check_alphas(self._alphas)
             return self._alphas
         if self._bulk_planet is not None and self._bulk_silicate_planet is not None:
             bp_elements = conv.convert_composition(self._bulk_planet, 'wtpt_elements')
@@ -209,6 +213,7 @@ class Planet(object):
         ...     p.set_alphas({'Fe': alpha_fe, 'Ni': 0.49})
         ...     bsps[alpha_fe] = p.bulk_silicate_planet
         """
+        const.check_alphas(alphas)
         self._alphas = alphas
 
     def get_composition(self, which: str, units: str = 'wtpt_oxides') -> dict[str, float]:
@@ -331,11 +336,7 @@ class Planet(object):
         )
 
         # Validate alpha values
-        for k, v in alphas.items():
-            if v <= 0 or v > 1:
-                raise ValueError(
-                    f"{k} alpha value must be a float where 0 < alpha <= 1"
-                )
+        const.check_alphas(alphas)
 
         # --- Putirka & Rarick (2019) algorithm ---
         # 1. BSP concentrations set directly from their alphas.        

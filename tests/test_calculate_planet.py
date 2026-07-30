@@ -20,8 +20,6 @@ def test_bulk_planet_from_stellar_dex():
             'Ca': 0.1,
             'Na': 0.3,
             'Ni': 0.04,
-            'C':  -0.14,
-            'O':  -0.06,
         }
     expected_bulk_planet = {
             'SiO2' : 42.37190416490457,
@@ -52,8 +50,6 @@ def test_create_planet_from_Star():
             'Ca': 0.1,
             'Na': 0.3,
             'Ni': 0.04,
-            'C':  -0.14,
-            'O':  -0.06,
         }
     expected_bulk_planet = {
             'SiO2' : 42.37190416490457,
@@ -152,8 +148,6 @@ def test_stellar_dex_from_bulk_planet():
         'Ca': 0.1,
         'Na': 0.3,
         'Ni': 0.04,
-        'C':  -0.14,
-        'O':  -0.06,
     }
     p = Planet(stellar_dex=star_32768_dex)
     bulk = p.bulk_planet
@@ -241,9 +235,29 @@ def test_all_alphas_used():
     bsp = p.get_composition(which="bulk_silicate_planet", units="wtpt_elements")
     
     assert bsp == pytest.approx(expected_bsp_wtpt_elements, rel=1e-4)
-    
 
 def test_bad_alpha_raises():
     """Ensure that any key in the alphas dict that is not a known cation raises a
-    ValueError."""
-    pass
+    ValueError. Ensure that any value in the alphas dict is a float >0 and <=1"""
+    # known dex composition of 32768 from the Hypatia catalog (Hinkel et al.
+    # 2014) as reported in Putirka and Rarick (2019)
+    star_32768_dex = {
+        'Si': 0.27,
+        'Ti': 4.61436*10**(-16),
+        'Cr': 0.08,
+        'Al': 0.23,
+        'Fe': 0.02,
+        'Mn': 0.06,
+        'Mg': 0.21,
+        'Ca': 0.1,
+        'Na': 0.3,
+        'Ni': 0.04,
+    }
+    star = Star(star_32768_dex)
+    alphas = {"Fe": 0.4, "Ni": 0.2, "fakeelement": 0.1}
+    alphas_bad_Ni = {"Fe": 0.4, "Ni": 0}
+    
+    with pytest.raises(ValueError, match="Alpha values contain"):
+        Planet.from_star(star, alphas=alphas)
+    with pytest.raises(ValueError, match="Ni alpha value must"):
+        Planet.from_star(star, alphas=alphas_bad_Ni)
