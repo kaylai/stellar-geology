@@ -102,7 +102,6 @@ def filter_compositional_keys(comp: dict[str, float],
     import math
     f = {k: (0.0 if (v is None or (isinstance(v, float) and math.isnan(v))) else v)
             for k, v in comp.items() if k in _composition_keys}
-    print(f)
     return f
 
 def check_alphas(alphas: dict[str, float]) -> None:
