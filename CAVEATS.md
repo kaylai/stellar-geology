@@ -31,6 +31,18 @@ Fe and Ni into the core. The reverse inflates them back. But:
   same alpha values used in the forward calculation. If you don't know the
   original alphas, the recovered bulk planet is model-dependent.
 
+### Alphas are concentration ratios, not mass fractions
+
+An alpha is the ratio of an element's concentration in the BSP to its concentration in the bulk planet, with both compositions normalized to 100%. It is *not* the fraction of that element's mass residing in the mantle. Removing core mass concentrates everything left behind, so the two differ by the silicate mass fraction: mass retained in mantle = alpha × `silicate_mass_fraction`. For example, with alpha_Fe = 0.49 and a 10% core, only ~44% of the planet's Fe mass is in the mantle — not 49%. Quoting alphas as retention fractions overstates mantle retention. The lithophile enrichment itself is informative: the common BSP/BP ratio of the fully lithophile elements fixes the core size, which is how `Planet.core_mass_fraction` and `Planet.core_composition` are derived.
+
+### The lithophile anchor assumption
+
+Normalized compositions only constrain alphas *relative to the most silicate-enriched elements*. Deriving alphas (and core properties) from a BP + BSP pair assumes those most-enriched elements are perfectly lithophile — a uniform depletion of every element into the core is invisible to normalized compositions. This is the same convention used by Putirka & Rarick (2019), but it is an assumption, not something the compositions can test. Relatedly, `core_mass_fraction` is a mass fraction on the volatile-free, oxygen-free element basis; a true planetary CMF additionally requires the oxygen bound in mantle oxides and any light elements in the core.
+
+### Not every BP/BSP pair fits the model
+
+For a model-consistent pair, all fully lithophile elements share one enrichment factor exactly. A measured or independently modeled BSP generally violates this, and then *no* alpha set can exactly reproduce the pair — the derived alphas and core properties are best-fit approximations, and stellar_geology raises a `UserWarning` when the lithophile ratios disagree beyond tolerance.
+
 ## 3. Bulk Planet Oxides -> Dex: Only "normalized" dex recovered
 
 The forward pipeline includes a normalization step (total_wt_atoms to wtpt_elements)
@@ -108,5 +120,6 @@ assumed.
 | Minor oxides (TiO2, Na2O, etc.) | mineralogy → BSP  | No — 5 CIPW oxides only    |
 | Fe/Mg split                     | mineralogy → BSP  | With assumed Mg#            |
 | Core partitioning model         | BSP → bulk planet | With known alphas           |
+| Uniform core partitioning       | BP + BSP → alphas | No — lithophile anchor assumed |
 | Absolute dex scale              | oxides → dex      | No                          |
 | Volatile elements (C, S)        | oxides → elements | No                          |

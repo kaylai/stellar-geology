@@ -4,10 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stellar_geology"
-version = "0.1.4"
+version = "0.2.0"
 description = "A python library for calculating planet geochemistry from stellar compositions."
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.22.4",
@@ -19,8 +20,8 @@ authors = [
     { name = "Kayla Iacovino", email = "kaylaiacovino@protonmail.com" },
 ]
 classifiers = [
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 

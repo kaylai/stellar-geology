@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 from stellar_geology.planet import Planet
 from stellar_geology.star import Star
@@ -409,3 +411,96 @@ def test_set_bulk_silicate_planet_to_none_clears():
     assert p.bulk_silicate_planet is None or p._bulk_silicate_planet is None  # cleared
     # with pytest.raises(ValueError, match="alphas is missing"):
     #     p.get_composition("bulk_silicate_planet", units="wtpt_oxides")
+
+# ---------------------------------------------------------------------------
+# Core mass fraction, silicate mass fraction, core composition
+# ---------------------------------------------------------------------------
+def test_core_mass_fraction_from_forward_pair():
+    """CMF derived from a model-consistent BP + alphas pair must match the
+    lithophile enrichment factor computed independently from the ratios."""
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES, alphas=ALPHAS)
+    cmf = p.core_mass_fraction
+    assert cmf is not None
+    assert 0 < cmf < 1
+
+    # independent check: enrichment = BSP/BP ratio of any lithophile element
+    bp_el = conv.convert_composition(p.bulk_planet, 'wtpt_elements')
+    bsp_el = conv.convert_composition(p.bulk_silicate_planet, 'wtpt_elements')
+    enrichment = bsp_el['Mg'] / bp_el['Mg']
+    assert cmf == pytest.approx((enrichment - 1) / enrichment, rel=1e-9)
+
+def test_silicate_mass_fraction_is_complement():
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES, alphas=ALPHAS)
+    assert p.silicate_mass_fraction == pytest.approx(1.0 - p.core_mass_fraction)
+
+def test_core_composition_mass_balance_closure():
+    """Stripping the per-element core masses from the BP element budget and
+    renormalizing must rebuild the BSP exactly."""
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES, alphas=ALPHAS)
+    core = p.core_composition
+    cmf = p.core_mass_fraction
+    bp_el = conv.convert_composition(p.bulk_planet, 'wtpt_elements')
+    bsp_el = conv.convert_composition(p.bulk_silicate_planet, 'wtpt_elements')
+
+    core_mass = 100.0 * cmf  # per 100 mass units of planet (element basis)
+    stripped = {el: bp_el[el] - core_mass * core.get(el, 0.0) / 100.0
+                for el in bp_el}
+    total = sum(stripped.values())
+    for el in bsp_el:
+        assert 100.0 * stripped[el] / total == pytest.approx(bsp_el[el], abs=1e-9)
+
+def test_core_composition_only_contains_core_partitioned_elements():
+    """Only elements with an alpha < 1 (or missing from the BSP) can have
+    mass in the core; lithophiles must not appear."""
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES, alphas=ALPHAS)
+    core = p.core_composition
+    assert set(core.keys()) == set(ALPHAS.keys())
+    assert sum(core.values()) == pytest.approx(100.0)
+    # Fe dominates this core
+    assert core['Fe'] == max(core.values())
+
+def test_core_properties_from_bp_and_bsp_pair():
+    """The lazy path: derive core properties from a BP + BSP pair with no
+    alphas passed. Fixture pair was generated with ALPHAS, so results must
+    match the forward-constructed planet."""
+    p_forward = Planet(bulk_planet=BULK_PLANET_OXIDES, alphas=ALPHAS)
+    p_lazy = Planet(bulk_planet=BULK_PLANET_OXIDES,
+                    bulk_silicate_planet=BULK_SILICATE_PLANET)
+    assert p_lazy.core_mass_fraction == pytest.approx(
+        p_forward.core_mass_fraction, rel=1e-4)
+    for el, wt in p_forward.core_composition.items():
+        assert p_lazy.core_composition[el] == pytest.approx(wt, rel=1e-3)
+
+def test_core_properties_none_when_unavailable():
+    assert Planet().core_mass_fraction is None
+    assert Planet().silicate_mass_fraction is None
+    assert Planet().core_composition is None
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES)  # no alphas, no BSP
+    assert p.core_mass_fraction is None
+    assert p.core_composition is None
+
+def test_no_core_when_bp_equals_bsp():
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES,
+               bulk_silicate_planet=dict(BULK_PLANET_OXIDES))
+    assert p.core_mass_fraction == pytest.approx(0.0)
+    assert p.silicate_mass_fraction == pytest.approx(1.0)
+    assert p.core_composition == {}
+
+def test_inconsistent_pair_warns():
+    """A BSP that no alpha set can reproduce (lithophile ratios disagree)
+    must raise a UserWarning when core properties are derived."""
+    bsp_inconsistent = dict(BULK_SILICATE_PLANET)
+    bsp_inconsistent['MgO'] *= 1.15  # break the common enrichment factor
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES,
+               bulk_silicate_planet=bsp_inconsistent)
+    with pytest.warns(UserWarning, match="inconsistent"):
+        p.core_mass_fraction
+
+def test_consistent_pair_does_not_warn():
+    p = Planet(bulk_planet=BULK_PLANET_OXIDES,
+               bulk_silicate_planet=BULK_SILICATE_PLANET)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        p.core_mass_fraction
+        p.core_composition
+        p.alphas
