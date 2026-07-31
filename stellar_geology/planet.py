@@ -5,6 +5,7 @@ direct geochemical inputs.
 
 from __future__ import annotations
 
+import warnings
 from typing import Any, TYPE_CHECKING
 
 from . import conversions as conv
@@ -149,48 +150,169 @@ class Planet(object):
             return conv.calculate_dex_from_bulk_planet(bulk)
         return None
 
+    def _fractionate_core(self) -> tuple[dict[str, float], float, float,
+                                       dict[str, float], dict[str, float]] | None:
+        """Solve the core partitioning mass balance from BP and BSP.
+
+        Computes the element-wise concentration ratios BSP/BP on the normalized wt%
+        element basis and splits them into alphas (0 < r <= 1, elements partitioned into
+        the core) and lithophile elements (r > 1, assumed fully retained in the
+        silicate).
+
+        Splitting the mass of the planet between the core and mantle depletes the mantle
+        in some elements and enriches them in all others. Any elements not partitioned
+        into the core have a common enrichment factor of 1/f, where f is the
+        silicate mass fraction. That enrichment factor is used to compute core mass
+        properties.
+
+        Returns
+        -------
+        tuple or None
+            ``(alphas, enrichment, spread, ratios, bp_elements)`` where
+            ``alphas`` is the derived alpha dict, ``enrichment`` is the
+            mass-weighted lithophile enrichment factor (1/f), ``spread``
+            is the absolute spread of individual lithophile ratios around
+            it, ``ratios`` holds r for every element with BP > 0 (r = 0
+            for elements absent from the BSP), and ``bp_elements`` is the
+            BP in normalized wt% elements. Returns None if either
+            composition is unavailable.
+
+        Warns
+        -----
+        UserWarning
+            If the lithophile ratios disagree beyond our set tolerance of 1e-3
+            (relative), meaning the BP/BSP pair is not exactly representable by the core
+            partitioning model and all derived quantities are best-fit approximations.
+        """
+        bulk = self.bulk_planet
+        silicate = self.bulk_silicate_planet
+        if bulk is None or silicate is None:
+            return None
+        bp_elements = conv.convert_composition(bulk, 'wtpt_elements')
+        bsp_elements = conv.convert_composition(silicate, 'wtpt_elements')
+        ratios = {
+            el: bsp_elements.get(el, 0.0) / bp_elements[el]
+            for el in bp_elements
+            if bp_elements[el] > 0
+        }
+
+        # Ratios in (0, 1] are alphas: those elements partition into the core.
+        # Ratios of 0 mean the element is missing from one composition; they
+        # cannot be represented as alphas (check_alphas requires alpha > 0).
+        alphas = {el: r for el, r in ratios.items() if 0 < r <= 1}
+
+        # Ratios > 1 are lithophile elements enriched by core removal. For a
+        # model-consistent BP/BSP pair they all share the same enrichment
+        # factor; a spread beyond tolerance means no alpha set can exactly
+        # reproduce this pair.
+        enrichment_spread_tolerance = 1e-3
+        lithophiles = {el: r for el, r in ratios.items() if r > 1}
+        if lithophiles:
+            enrichment = (sum(bsp_elements[el] for el in lithophiles)
+                          / sum(bp_elements[el] for el in lithophiles))
+            spread = max(lithophiles.values()) - min(lithophiles.values())
+            if spread / enrichment > enrichment_spread_tolerance:
+                warnings.warn(
+                    "Lithophile enrichment factors are inconsistent across "
+                    f"elements (spread {spread:.4f} around {enrichment:.4f}). "
+                    "This bulk planet / bulk silicate planet pair cannot be "
+                    "exactly reproduced by any alpha set; derived alphas, "
+                    "core_mass_fraction, and core_composition are best-fit "
+                    "approximations.")
+        else:
+            # No enriched elements: BP and BSP are identical, so no core.
+            enrichment = 1.0
+            spread = 0.0
+        return alphas, enrichment, spread, ratios, bp_elements
+
     @property
     def alphas(self) -> dict[str, float] | None:
         """dict[str, float] or None : Element partitioning ratios (BSP/BP) for core formation.
 
         Auto-calculated from ``bulk_planet`` + ``bulk_silicate_planet`` if
         not provided directly.
+
+        Alphas are concentration ratios on the normalized wt% element
+        basis, not mass fractions: the fraction of an element's mass
+        residing in the silicate is alpha * silicate_mass_fraction.
+        Elements absent from the dict are treated as fully lithophile.
         """
         if self._alphas is not None:
             const.check_alphas(self._alphas)
             return self._alphas
-        if self._bulk_silicate_planet is not None:
-            if self._bulk_planet is not None:
-                bp_elements = conv.convert_composition(self._bulk_planet, 'wtpt_elements')
-            elif self._stellar_dex is not None:
-                bulk = self.bulk_planet
-                if bulk is None:
-                    return None
-                bp_elements = conv.convert_composition(bulk, 'wtpt_elements')
-            else:
-                return None
-            bsp_elements = conv.convert_composition(self._bulk_silicate_planet, 'wtpt_elements')
-            calculated_alphas = {
-                el: bsp_elements[el] / bp_elements[el]
-                for el in bp_elements
-                if bp_elements[el] > 0 and el in bsp_elements
-            }
-            
-            # if any computed alphas are >1 it is an artifact of normalization and indicates
-            # that those alpha values were =1 or never set. If any computed alphas are 0 it's
-            # because the star or planet comp has a 0 value for that element - rm from alpha dict
-            keys_to_remove = []
-            for k in calculated_alphas.keys():
-                if calculated_alphas[k] <= 0:
-                    keys_to_remove.append(k)
-                elif calculated_alphas[k] > 1:
-                    keys_to_remove.append(k)
-            # now rm keys <=0 from alphas dict
-            for z in keys_to_remove:
-                calculated_alphas.pop(z)
-            const.check_alphas(calculated_alphas)
-            return calculated_alphas
-        return None
+        core_frac_params = self._fractionate_core()
+        if core_frac_params is None:
+            return None
+        calculated_alphas = core_frac_params[0]
+        const.check_alphas(calculated_alphas)
+        return calculated_alphas
+
+    @property
+    def core_mass_fraction(self) -> float | None:
+        """float or None : Core mass fraction (CMF) of the planet.
+
+        Derived from the lithophile enrichment factor: elements with no
+        core affinity are concentrated in the silicate by exactly the
+        mass removed into the core, so their common BSP/BP ratio fixes
+        the core size. Requires both ``bulk_planet`` and
+        ``bulk_silicate_planet`` to be available (directly or derived);
+        returns None otherwise.
+
+        Caveats: the value is a mass fraction on the volatile-free,
+        oxygen-free element basis, not the true planet mass basis —
+        converting to a true CMF requires accounting for oxygen bound in
+        the mantle oxides and light elements in the core. It also
+        inherits the anchor assumption that the most silicate-enriched
+        elements are perfectly lithophile; a uniform depletion of all
+        elements into the core is invisible to normalized compositions.
+        See CAVEATS.md.
+        """
+        core_frac_params = self._fractionate_core()
+        if core_frac_params is None:
+            return None
+        enrichment = core_frac_params[1]
+        return (enrichment - 1.0) / enrichment
+
+    @property
+    def silicate_mass_fraction(self) -> float | None:
+        """float or None : Silicate (mantle) mass fraction of the planet.
+
+        The complement of ``core_mass_fraction``; see that property for
+        derivation and caveats. Multiply an alpha by this value to get
+        the fraction of that element's mass residing in the silicate.
+        """
+        cmf = self.core_mass_fraction
+        if cmf is None:
+            return None
+        return 1.0 - cmf
+
+    @property
+    def core_composition(self) -> dict[str, float] | None:
+        """dict[str, float] or None : Core composition in wt% elements (metal basis).
+
+        Per-element core masses follow from the mass balance: the
+        fraction of an element's planetary inventory in the core is
+        1 - alpha / enrichment, where enrichment is the common
+        lithophile BSP/BP ratio. Returns an empty dict if the planet has
+        no core (BP equals BSP), or None if the compositions needed are
+        unavailable. Shares the element-basis and lithophile-anchor
+        caveats of ``core_mass_fraction``.
+        """
+        core_frac_params = self._fractionate_core()
+        if core_frac_params is None:
+            return None
+        _, enrichment, _, ratios, bp_elements = core_frac_params
+        core = {}
+        for el, r in ratios.items():
+            # retention within float noise of 1 means fully lithophile
+            retention = min(r / enrichment, 1.0)
+            if retention >= 1.0 - 1e-12:
+                continue
+            core[el] = (1.0 - retention) * bp_elements[el]
+        total = sum(core.values())
+        if total == 0:
+            return {}
+        return {el: 100.0 * m / total for el, m in core.items()}
     
     @property
     def name(self) -> str | None:
