@@ -490,14 +490,18 @@ class Planet(object):
         -------
         dict[str, float]
             Bulk silicate planet composition in wt% oxides.
+        
+        Notes
+        -----
+        Fe in the mantle is calculated on the basis of FeO only (FeOtotal accounting
+        for reduced and oxidized Fe).
         """
         # TODO consider failure cases for other lack of keys (Ni?), units, etc...
         if "FeO" not in list(bulk_planet.keys()):
             raise ValueError("Bulk planet composition must have FeO concentration.")
 
         # Translate bulk_planet to wt% element basis. Reachable only via the
-        # bulk_silicate_planet property after it has confirmed bulk_planet is
-        # available, so this call is guaranteed to succeed.
+        # bulk_silicate_planet property after it has confirmed bulk_planet is available.
         bulk_wtpt_elements = self.get_composition(
             which="bulk_planet", units="wtpt_elements"
         )
@@ -505,29 +509,29 @@ class Planet(object):
         # Validate alpha values
         const.check_alphas(alphas)
 
-        # --- Putirka & Rarick (2019) algorithm ---
-        # 1. BSP concentrations set directly from their alphas.        
+        # --- Modified Putirka & Rarick (2019) algorithm ---
+        # BSP concentrations set directly from their alphas     
         bsp_elements = {}
         for cation in const.cationMass.keys():
             if cation in alphas.keys():
                 bsp_conc = alphas.get(cation, 1.0) * bulk_wtpt_elements.get(cation, 0.0)
                 bsp_elements[cation] = bsp_conc
 
-        # 2. Remaining mass budget for all other (lithophile) elements.
+        # Remaining mass budget for all other elements
         remaining_mass = 100.0 - sum(bsp_elements.values())
 
-        # 3. Sum of BP element wt% for all elements not partitioned into core.
+        # Sum of BP element wt% for all elements not partitioned into core
         sum_lithophile_bp = sum(
             v for k, v in bulk_wtpt_elements.items() if k not in bsp_elements.keys()
         )
 
-        # 4. Build BSP element wt%: Any elements w/alphas are set directly; everything
-        # else is rescaled proportionally to fill the remaining mass.
+        # BSP element wt%: Any elements w/alphas are set directly; everything else is
+        # rescaled proportionally to fill the remaining mass
         for k, v in bulk_wtpt_elements.items():
             if k not in bsp_elements.keys():
                 bsp_elements[k] = remaining_mass * v / sum_lithophile_bp
 
-        # 5. Convert BSP wt% elements to wt% oxides (normalizes to 100).
+        # Convert BSP wt% elements to wt% oxides
         return conv.convert_to_wtpt_oxides(bsp_elements, "wtpt_elements")
 
     def _calculate_bulk_from_silicate(self, bulk_silicate_planet: dict[str, float],

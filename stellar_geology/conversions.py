@@ -327,7 +327,7 @@ def calculate_dex_from_bulk_planet(wtpt_oxides: dict[str, float]) -> dict[str, f
     return dex
 
 
-#--- COMPOSABLE UNIT CONVERSION SYSTEM ---#
+#--- UNIT CONVERSIONS ---#
 
 # Valid unit strings for convert_composition
 VALID_UNITS: list[str] = [
@@ -418,6 +418,8 @@ def convert_composition(wtpt_oxides: dict[str, float], units: str) -> dict[str, 
     ValueError
         If units is not a recognized unit string.
     """
+    #TODO!!# don't require wtpt_oxides as input unit. Make it any valid unit!!
+    
     if units not in VALID_UNITS:
         raise ValueError(f"units must be one of {VALID_UNITS}, got '{units}'.")
 
