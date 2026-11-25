@@ -182,7 +182,7 @@ class Planet(object):
         UserWarning
             If the lithophile ratios disagree beyond our set tolerance of 1e-3
             (relative), meaning the BP/BSP pair is not exactly representable by the core
-            partitioning model and all derived quantities are best-fit approximations.
+            partitioning model and all derived quantities are approximations.
         """
         bulk = self.bulk_planet
         silicate = self.bulk_silicate_planet
@@ -217,7 +217,7 @@ class Planet(object):
                     f"elements (spread {spread:.4f} around {enrichment:.4f}). "
                     "This bulk planet / bulk silicate planet pair cannot be "
                     "exactly reproduced by any alpha set; derived alphas, "
-                    "core_mass_fraction, and core_composition are best-fit "
+                    "core_mass_fraction, and core_composition are "
                     "approximations.")
         else:
             # No enriched elements: BP and BSP are identical, so no core.
